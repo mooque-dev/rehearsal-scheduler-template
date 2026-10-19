@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+:root {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Light theme: overrides the Tailwind color tokens the app's components
+   already use (bg-zinc-950, text-red-400, bg-amber-900/30, ...). Tailwind v4
+   utilities read these as CSS custom properties, including inside the
+   color-mix() it generates for /NN opacity modifiers, so redefining them here
+   re-themes every component with no className changes. */
+:root[data-theme="light"] {
+  --background: #fafafa;
+  --foreground: #18181b;
+  color-scheme: light;
+
+  --color-zinc-950: #fafafa;
+  --color-zinc-900: #ffffff;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-600: #9f9fa9;
+  --color-zinc-500: #71717b;
+  --color-zinc-400: #52525c;
+  --color-zinc-300: #3f3f46;
+  --color-zinc-200: #27272a;
+  --color-zinc-100: #18181b;
+
+  /* status text needs real contrast on a light page; the originals were
+     tuned to pop on near-black */
+  --color-red-400: #dc2626;
+  --color-amber-400: #b45309;
+  --color-emerald-500: #009966;
+  --color-blue-400: #155dfc;
+  --color-sky-400: #0369a1;
+  --color-violet-400: #7c3aed;
+
+  /* dark washes (e.g. bg-amber-900/30, bg-blue-950/40) become pale
+     highlight tints instead of muddy overlays on a light page */
+  --color-red-900: #fee2e2;
+  --color-amber-900: #fef3c7;
+  --color-amber-950: #fffbeb;
+  --color-blue-950: #eff6ff;
+  --color-blue-900: #dbeafe;
+
+  /* text meant to sit on those washes flips from light-on-dark to
+     dark-on-light along with them */
+  --color-amber-200: #78350f;
+  --color-amber-300: #92400e;
+  --color-blue-200: #1e3a8a;
+  /* the unsaved-changes banner's text — was never remapped, so it rendered
+     pale blue on a pale-blue wash in light theme */
+  --color-blue-300: #1d4ed8;
+}
+
+/* Font size preference scales the rem-based Tailwind type scale globally */
+:root[data-font-size="large"] {
+  font-size: 112.5%;
+}
+:root[data-font-size="xlarge"] {
+  font-size: 125%;
+}
+
+/* ── Interaction foundation ──────────────────────────────────────────────
+   One place for the things every control should get, rather than repeating
+   them per component. */
+
+html {
+  /* no grey flash on tap — controls draw their own pressed state */
+  -webkit-tap-highlight-color: transparent;
+  /* removes the 300ms double-tap-zoom delay on older mobile browsers */
+  touch-action: manipulation;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* A visible focus ring for keyboard users only (pointer taps don't show it). */
+:focus-visible {
+  outline: 2px solid var(--color-blue-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+/* For elements that take focus only as a container — the schedule's scroll
+   area (keyboard scrolling) and sheet panels (focus moves there on open) — a
+   ring would frame the whole thing; the controls inside carry their own. */
+.no-focus-ring:focus-visible {
+  outline: none;
+}
+
+/* Numbers that sit in columns (counts, dates, badges) shouldn't jitter. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Motion ──────────────────────────────────────────────────────────────
+   Short and physical; everything is disabled under reduced-motion below. */
+
+@keyframes ys-fade-in {
+  from { opacity: 0; }
+}
+@keyframes ys-sheet-up {
+  from { transform: translateY(100%); }
+}
+@keyframes ys-pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+/* a tapped cell's symbol lands rather than appearing */
+@keyframes ys-cell-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); }
+}
+/* the save badge nudges when the count changes */
+@keyframes ys-bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+/* wrong passphrase */
+@keyframes ys-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+@keyframes ys-toast-in {
+  /* transform only — the horizontal centring uses Tailwind's separate
+     `translate` property, which this composes with rather than overrides */
+  from { opacity: 0; transform: translateY(-12px); }
+}
+
+.anim-fade { animation: ys-fade-in 180ms ease-out both; }
+.anim-sheet { animation: ys-sheet-up 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-pop { animation: ys-pop-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-cell { display: inline-block; animation: ys-cell-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.anim-bump { display: inline-block; animation: ys-bump 280ms ease-out; }
+.anim-shake { animation: ys-shake 320ms ease-in-out; }
+.anim-toast { animation: ys-toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* On wide screens the sheet is a centred dialog, so it pops rather than slides. */
+@media (min-width: 640px) {
+  .anim-sheet { animation: ys-pop-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+}
+
+/* Pressed state for any tappable surface — the physical "it registered" cue
+   that hover can't give on a phone. */
+.press {
+  transition: transform 120ms ease, background-color 150ms ease, color 150ms ease,
+    border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+}
+.press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  .press:active:not(:disabled) { transform: none; }
+}
+
+/* A date with a notice on the Notices calendar: a dot under the number. */
+.ys-has-notice > button::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 9999px;
+  background: var(--color-amber-400);
+}
+.ys-has-notice[data-selected="true"] > button::after {
+  background: #fff;
+}
+
+/* Notices calendar: rehearsal days get a soft tile, off days fade back. */
+.ys-rehearsal > button {
+  background: color-mix(in srgb, var(--color-blue-500) 16%, transparent);
+  color: var(--color-blue-300);
+  font-weight: 600;
+}
+.ys-visit > button {
+  background: color-mix(in srgb, var(--color-violet-500) 18%, transparent);
+  color: var(--color-violet-300);
+  font-weight: 600;
+}
+.ys-show > button {
+  background: color-mix(in srgb, var(--color-amber-500) 16%, transparent);
+  color: var(--color-amber-300);
+  font-weight: 600;
+}
+.ys-unscheduled > button {
+  color: var(--color-zinc-600);
+}
+.ys-unscheduled[data-selected="true"] > button {
+  color: #fff;
+}
+
+/* Rehearsal-free stretch: hatched, clearly different from "just empty". */
+.ys-break > button {
+  color: var(--color-zinc-400);
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    color-mix(in srgb, var(--color-zinc-500) 28%, transparent) 4px 6px
+  );
+}
+.ys-break-swatch {
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 2px,
+    color-mix(in srgb, var(--color-zinc-500) 45%, transparent) 2px 3px
+  );
+}
