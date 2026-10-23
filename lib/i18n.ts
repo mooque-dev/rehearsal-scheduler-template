@@ -1,7 +1,7 @@
 import { SITE } from "@/lib/site.config";
 export type Lang = "ko" | "en";
-export const DEPARTMENTS = ["actors", "production", "marketing"] as const;
-export type DepartmentKey = (typeof DEPARTMENTS)[number];
+/** a team key, as chosen on /admin (stored in people.department) */
+export type DepartmentKey = string;
 export const ROLES = ["Main/Sub", "Ensemble", "Coach"] as const;
 export const ROLE_FILTERS = ["All", "Main/Sub", "Ensemble", "Coach", "Unassigned"] as const;
 
@@ -35,8 +35,9 @@ export const STRINGS = {
     Coach: "Coach",
     Unassigned: "Unassigned",
     show: "SHOW",
-    coachVisit: "Coach visit",
-    coachShort: "Coach",
+    coachVisit: "Special session",
+    allHands: "Everyone attends",
+    coachShort: "Special",
     language: "Language",
     theme: "Theme",
     fontSize: "Font Size",
@@ -141,8 +142,9 @@ export const STRINGS = {
     Coach: "코치",
     Unassigned: "미지정",
     show: "공연",
-    coachVisit: "코치 방문",
-    coachShort: "코치",
+    coachVisit: "특별 일정",
+    allHands: "전체 참석",
+    coachShort: "특별",
     language: "언어",
     theme: "테마",
     fontSize: "글꼴 크기",
@@ -226,9 +228,10 @@ export function t(lang: Lang, key: StringKey): string {
   return STRINGS[lang][key];
 }
 
-// Team tab names come from site.config.ts (the storage keys never change).
-export function seasonDeptLabel(d: DepartmentKey, lang: Lang): string {
-  return SITE.departments[d][lang];
+/** A team's tab name in the viewer's language (falls back to the key). */
+export function teamLabel(teams: { key: string; name_en: string; name_ko: string }[], key: string, lang: Lang): string {
+  const t = teams.find((x) => x.key === key);
+  return t ? (lang === "ko" ? t.name_ko || t.name_en : t.name_en || t.name_ko) : key;
 }
 
 // Seasons that start everyone at "not selected" cycle through it as well.

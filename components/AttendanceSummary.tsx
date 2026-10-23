@@ -31,6 +31,7 @@ export default function AttendanceSummary({
   defaultStatus,
   focusId,
   lang,
+  usesRoles = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -41,6 +42,7 @@ export default function AttendanceSummary({
   defaultStatus: "yes" | "unset";
   focusId: number | null;
   lang: Lang;
+  usesRoles?: boolean;
 }) {
   const l = (k: Parameters<typeof t>[1]) => t(lang, k);
   const ko = lang === "ko";
@@ -48,12 +50,13 @@ export default function AttendanceSummary({
   const focusRef = useRef<HTMLLIElement>(null);
 
   const rows = useMemo(() => {
+    const roleTeams = new Set(usesRoles ? people.map((p) => p.department) : []);
     const today = localISODate();
     const list = people.map((p) => {
       const absent: string[] = [];
       let unanswered = 0;
       for (const d of dates) {
-        if (!attends(p, d)) continue;
+        if (!attends(p, d, roleTeams)) continue;
         const k = `${p.id}:${d.date}`;
         const status = pendingChanges.has(k) ? pendingChanges.get(k) : (statusMap.get(k) ?? defaultStatus);
         if (status === "no") absent.push(d.date);
@@ -67,7 +70,7 @@ export default function AttendanceSummary({
         : b.absent.length - a.absent.length || a.p.name.localeCompare(b.p.name, ko ? "ko" : "en")
     );
     return list;
-  }, [people, dates, statusMap, pendingChanges, defaultStatus, sort, ko]);
+  }, [people, dates, statusMap, pendingChanges, defaultStatus, sort, ko, usesRoles]);
 
   useEffect(() => {
     if (open && focusId !== null) setTimeout(() => focusRef.current?.scrollIntoView({ block: "center" }), 50);

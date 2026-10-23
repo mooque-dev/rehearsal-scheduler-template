@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePreferences } from "@/lib/prefs";
-import { t, seasonDeptLabel, type DepartmentKey } from "@/lib/i18n";
+import { t, teamLabel, type DepartmentKey } from "@/lib/i18n";
 import type { Person, Notice, UpdateLogEntry } from "@/lib/types";
-import type { SeasonDate } from "@/lib/season";
+import type { SeasonDate, Team } from "@/lib/season";
 import SettingsModal from "@/components/SettingsModal";
 import NoticesModal from "@/components/NoticesModal";
 import CalendarModal from "@/components/CalendarModal";
@@ -24,6 +24,7 @@ export default function ArchiveApp() {
 
   const [people, setPeople] = useState<Person[]>([]);
   const [dates, setDates] = useState<SeasonDate[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [statusMap, setStatusMap] = useState(new Map<string, string>());
   const [logs, setLogs] = useState<UpdateLogEntry[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -35,6 +36,12 @@ export default function ArchiveApp() {
   const [noticesOpen, setNoticesOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
+  const usesRoles = !!teams.find((tm) => tm.key === department)?.uses_roles;
+
+  useEffect(() => {
+    if (teams.length > 0 && !teams.some((tm) => tm.key === department)) setDepartment(teams[0].key);
+  }, [teams, department]);
+
   const fetchSchedule = useCallback(async () => {
     setLoading(true);
     setLoadError(false);
@@ -44,6 +51,7 @@ export default function ArchiveApp() {
       if (!res.ok) throw new Error(data.error ?? "load_failed");
       setPeople(data.people ?? []);
       setDates(data.dates ?? []);
+      setTeams(data.teams ?? []);
       setLogs(data.logs ?? []);
       setNotices(data.notices ?? []);
       const m = new Map<string, string>();
@@ -102,10 +110,11 @@ export default function ArchiveApp() {
             setRoleFilter("All");
             setDepartment(d);
           }}
-          labelFor={(d) => seasonDeptLabel(d, prefs.lang)}
+          keys={teams.map((tm) => tm.key)}
+          labelFor={(d) => teamLabel(teams, d, prefs.lang)}
         />
 
-        {department === "actors" && (
+        {usesRoles && (
           <div className="mb-3 sm:mb-4 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 [scrollbar-width:none]">
             <RoleFilterChips active={roleFilter} onChange={setRoleFilter} lang={prefs.lang} />
           </div>
@@ -119,9 +128,10 @@ export default function ArchiveApp() {
           pendingRoles={new Map()}
           lang={prefs.lang}
           department={department}
+          usesRoles={usesRoles}
         />
 
-        <StatusLegend lang={prefs.lang} showRoles={department === "actors"} showMaybe />
+        <StatusLegend lang={prefs.lang} showRoles={usesRoles} showMaybe />
 
         <div className="mt-5 sm:mt-6">
           <UpdateLog logs={logs} lang={prefs.lang} />

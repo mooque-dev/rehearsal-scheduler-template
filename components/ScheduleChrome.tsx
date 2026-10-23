@@ -4,14 +4,17 @@
 // earlier season (ArchiveApp). Team labels come from site.config.ts.
 
 import type { ReactNode } from "react";
-import { t, DEPARTMENTS, ROLE_DOT_COLOR, type DepartmentKey, type Lang } from "@/lib/i18n";
+import { t, ROLE_DOT_COLOR, type DepartmentKey, type Lang } from "@/lib/i18n";
 
 export function DeptTabs({
+  keys,
   value,
   onChange,
   labelFor,
   trailing,
 }: {
+  /** team keys in tab order */
+  keys: string[];
   value: DepartmentKey;
   onChange: (d: DepartmentKey) => void;
   labelFor: (d: DepartmentKey) => string;
@@ -21,7 +24,7 @@ export function DeptTabs({
   return (
     <div className="mb-3 sm:mb-4 flex items-center border-b border-zinc-800 -mx-3 px-3 sm:mx-0 sm:px-0">
     <div role="tablist" className="flex gap-1 min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
-      {DEPARTMENTS.map((d) => {
+      {keys.map((d) => {
         const on = d === value;
         return (
           <button

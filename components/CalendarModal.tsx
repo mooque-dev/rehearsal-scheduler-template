@@ -7,7 +7,6 @@ import { t, type Lang } from "@/lib/i18n";
 import type { Notice } from "@/lib/types";
 import type { SeasonDate } from "@/lib/season";
 import { Button, Icon, Sheet } from "@/components/ui";
-import { PLACES } from "@/lib/season";
 import { mapsUrl } from "@/lib/resources";
 import { NoticeCard, formatNoticeDate } from "@/components/NoticesModal";
 
@@ -28,9 +27,9 @@ function ScheduleCalendar({ notices, dates, breaks, lang }: { notices: Notice[];
     return m;
   }, [notices]);
   const marked = useMemo(() => [...byDay.keys()].map(parseDay), [byDay]);
-  const rehearsals = useMemo(() => dates.filter((d) => !d.isPerformance && !d.coachVisit), [dates]);
+  const rehearsals = useMemo(() => dates.filter((d) => !d.isPerformance && !d.special), [dates]);
   const rehearsalDays = useMemo(() => rehearsals.map((d) => parseDay(d.date)), [rehearsals]);
-  const visitDays = useMemo(() => dates.filter((d) => d.coachVisit).map((d) => parseDay(d.date)), [dates]);
+  const visitDays = useMemo(() => dates.filter((d) => d.special).map((d) => parseDay(d.date)), [dates]);
   const showDays = useMemo(() => dates.filter((d) => d.isPerformance).map((d) => parseDay(d.date)), [dates]);
   const dateByKey = useMemo(() => new Map(dates.map((d) => [d.date, d])), [dates]);
   const isBreak = (d: Date) => breaks.some((b) => dayKey(d) >= b.from && dayKey(d) <= b.to);
@@ -127,32 +126,44 @@ function ScheduleCalendar({ notices, dates, breaks, lang }: { notices: Notice[];
 
       <h3 className="mt-4 mb-2 text-sm font-semibold text-zinc-300 tabular flex items-center gap-2 flex-wrap">
         {selected ? formatNoticeDate(dayKey(selected), lang) : ""}
-        {dayDate && !dayDate.isPerformance && (
+        {dayDate && (
           <span
             className={`text-[0.6875rem] px-1.5 py-0.5 rounded-full font-semibold ${
-              dayDate.coachVisit ? "bg-violet-500/20 text-violet-300" : "bg-blue-500/20 text-blue-300"
+              dayDate.isPerformance
+                ? "bg-amber-500/20 text-amber-300"
+                : dayDate.special
+                  ? "bg-violet-500/20 text-violet-300"
+                  : "bg-blue-500/20 text-blue-300"
             }`}
           >
-            {dayDate.coachVisit ? `${l("coachVisit")} · ${l("castOnly")}` : l("rehearsalDay")}
+            {dayDate.title || (dayDate.isPerformance ? l("show") : dayDate.special ? l("coachVisit") : l("rehearsalDay"))}
+          </span>
+        )}
+        {dayDate?.allHands && (
+          <span className="text-[0.6875rem] px-1.5 py-0.5 rounded-full font-semibold bg-amber-500/15 text-amber-300">
+            ★ {l("allHands")}
           </span>
         )}
       </h3>
-      {dayDate && (dayDate.time || dayDate.place) && (
+      {dayDate && (dayDate.time || dayDate.venue) && (
         <p className="mb-2 text-sm text-zinc-300 flex items-start gap-1.5">
           <Icon name="clock" className="w-3.5 h-3.5 mt-0.5 shrink-0 text-zinc-500" />
           <span>
             {dayDate.time}
-            {dayDate.time && dayDate.place ? " · " : ""}
-            {dayDate.place && (
-              <a
-                href={mapsUrl(PLACES[dayDate.place].address)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 underline decoration-blue-400/40 underline-offset-2 hover:decoration-blue-400"
-              >
-                {PLACES[dayDate.place][lang]}
-              </a>
-            )}
+            {dayDate.time && dayDate.venue ? " · " : ""}
+            {dayDate.venue &&
+              (dayDate.venue.address ? (
+                <a
+                  href={mapsUrl(dayDate.venue.address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 underline decoration-blue-400/40 underline-offset-2 hover:decoration-blue-400"
+                >
+                  {dayDate.venue.name}
+                </a>
+              ) : (
+                dayDate.venue.name
+              ))}
           </span>
         </p>
       )}

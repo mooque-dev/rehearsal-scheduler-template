@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { DbNotConfiguredError } from "@/lib/db";
 import { verifyToken, ARCHIVE_COOKIE } from "@/lib/archiveAuth";
 import { loadSchedule } from "@/app/api/schedule/shared";
-import type { DepartmentKey } from "@/lib/i18n";
 
-const VALID_DEPARTMENTS: DepartmentKey[] = ["actors", "production", "marketing"];
-
-function isValidDepartment(d: string | null): d is DepartmentKey {
-  return !!d && (VALID_DEPARTMENTS as string[]).includes(d);
+// Team keys are lowercase slugs chosen in /admin; the GET only checks the shape,
+// writes check the team really exists.
+function isValidDepartment(d: string | null): d is string {
+  return !!d && /^[a-z0-9_-]{1,40}$/.test(d);
 }
 
 export async function GET(req: NextRequest) {

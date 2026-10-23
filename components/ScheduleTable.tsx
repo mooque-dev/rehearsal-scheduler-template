@@ -2,7 +2,7 @@
 
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { storageKey } from "@/lib/site.config";
-import { t, ROLE_ORDER, ROLE_DOT_COLOR, displayCharacterName, type Lang, type DepartmentKey } from "@/lib/i18n";
+import { t, ROLE_ORDER, ROLE_DOT_COLOR, displayCharacterName, type Lang } from "@/lib/i18n";
 import type { Person } from "@/lib/types";
 import { attends, type SeasonDate } from "@/lib/season";
 import RoleDot from "@/components/RoleDot";
@@ -80,6 +80,7 @@ export default function ScheduleTable({
   pendingRoles,
   lang,
   department,
+  usesRoles = false,
   lastToggled,
   defaultStatus = "yes",
   onNameClick,
@@ -92,7 +93,9 @@ export default function ScheduleTable({
   onRoleChange?: (personId: number, role: string | null) => void;
   pendingRoles: Map<number, string | null>;
   lang: Lang;
-  department: DepartmentKey;
+  department: string;
+  /** group this team by role (leads / ensemble / coaches) */
+  usesRoles?: boolean;
   /** "personId:date#n" of the most recent tap, so only that cell animates */
   lastToggled?: string | null;
   /** what a cell with no saved answer means: "yes" (attending) or "unset" (not selected) */
@@ -116,7 +119,8 @@ export default function ScheduleTable({
       }
       return next;
     });
-  const isActors = department === "actors";
+  const isActors = usesRoles;
+  const roleTeams = new Set(usesRoles ? [department] : []);
   const l = (k: Parameters<typeof t>[1]) => t(lang, k);
   const isMobile = useIsMobile();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -201,29 +205,41 @@ export default function ScheduleTable({
                   key={d.date}
                   ref={isToday ? todayColRef : undefined}
                   scope="col"
-                  aria-label={p.obj.toLocaleDateString(locale, { month: "long", day: "numeric", weekday: "long" })}
-                  className={`relative border-b border-r px-0.5 pt-1.5 pb-1.5 text-center align-bottom ${d.date < localISODate() && !d.coachVisit ? "opacity-50" : ""} ${
+                  aria-label={[
+                    p.obj.toLocaleDateString(locale, { month: "long", day: "numeric", weekday: "long" }),
+                    d.title,
+                    d.allHands ? l("allHands") : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  title={[d.title, d.time, d.venue?.name, d.allHands ? l("allHands") : null].filter(Boolean).join(" · ") || undefined}
+                  className={`relative border-b border-r px-0.5 pt-1.5 pb-1.5 text-center align-bottom ${d.date < localISODate() && !d.special ? "opacity-50" : ""} ${
                     d.isPerformance
                       ? "bg-amber-900/40 text-amber-300 border-zinc-800"
-                      : d.coachVisit
+                      : d.special
                         ? "bg-violet-900/30 text-violet-200 border-zinc-800"
                         : isToday
                         ? "bg-blue-900/40 text-blue-200 border-blue-700/50"
                         : "bg-zinc-900 text-zinc-300 border-zinc-800"
                   } ${showMonth && i > 0 ? "border-l border-l-zinc-600" : ""}`}
                 >
-                  <div className={`text-[0.6875rem] leading-none font-semibold h-3 ${showMonth ? (isToday ? "text-blue-300" : "text-zinc-400") : weekday ? (d.coachVisit ? "text-violet-300" : "text-zinc-400") : "text-transparent"}`}>
+                  <div className={`text-[0.6875rem] leading-none font-semibold h-3 ${showMonth ? (isToday ? "text-blue-300" : "text-zinc-400") : weekday ? (d.special ? "text-violet-300" : "text-zinc-400") : "text-transparent"}`}>
                     {showMonth ? monthLabel : (weekday ?? "·")}
                   </div>
+                  {d.allHands && (
+                    <span aria-hidden="true" className="absolute top-0.5 right-1 text-[0.625rem] leading-none text-amber-400">
+                      ★
+                    </span>
+                  )}
                   <div className="tabular text-base sm:text-lg leading-tight font-bold mt-0.5">{p.day}</div>
                   <div
                       className={`text-[0.6875rem] leading-none font-semibold mt-0.5 h-3 whitespace-nowrap ${
-                        d.isPerformance ? "text-amber-400" : d.coachVisit ? "text-violet-300" : isToday ? "text-blue-300" : "text-zinc-400"
+                        d.isPerformance ? "text-amber-400" : d.special ? "text-violet-300" : isToday ? "text-blue-300" : "text-zinc-400"
                       }`}
                     >
                       {d.isPerformance
                         ? l("show")
-                        : d.coachVisit
+                        : d.special
                           ? l("coachShort")
                         : isToday
                           ? d.date === localISODate()
@@ -273,7 +289,7 @@ export default function ScheduleTable({
                 // days marked absent, counting unsaved edits; shown as a tiny number after the name
                 let missed = 0;
                 for (const d of dates) {
-                  if (!attends(person, d)) continue;
+                  if (!attends({ ...person, department }, d, roleTeams)) continue;
                   const k = key(person.id, d.date);
                   if ((pendingChanges.has(k) ? pendingChanges.get(k) : statusMap.get(k)) === "no") missed++;
                 }
@@ -362,7 +378,7 @@ export default function ScheduleTable({
                       const isPending = pendingChanges.has(k);
                       const isToday = i === todayCol;
                       const justTapped = !!lastToggled && lastToggled.startsWith(k + "#");
-                      if (!attends(person, d)) {
+                      if (!attends({ ...person, department }, d, roleTeams)) {
                         return (
                           <td key={d.date} className="p-0 border-b border-r border-zinc-800/80 bg-zinc-900/60">
                             <div className="h-10 sm:h-9 flex items-center justify-center text-zinc-700" aria-hidden="true">
@@ -371,7 +387,7 @@ export default function ScheduleTable({
                           </td>
                         );
                       }
-                      const tint = `${d.isPerformance && status === "yes" ? "bg-amber-950/20" : ""} ${isToday && status === "yes" ? "bg-blue-950/30" : ""} ${d.coachVisit && status === "yes" ? "bg-violet-950/25" : ""} ${STATUS_BG_CLASS[status]}`;
+                      const tint = `${d.isPerformance && status === "yes" ? "bg-amber-950/20" : ""} ${isToday && status === "yes" ? "bg-blue-950/30" : ""} ${d.special && status === "yes" ? "bg-violet-950/25" : ""} ${STATUS_BG_CLASS[status]}`;
                       const symbol = (
                         <span
                           key={justTapped ? lastToggled! : "static"}
@@ -384,7 +400,7 @@ export default function ScheduleTable({
                       return (
                         <td
                           key={d.date}
-                          className={`p-0 border-b border-r ${d.date < localISODate() && !isPending && !d.coachVisit ? "opacity-50" : ""} ${isToday ? "border-blue-700/30" : "border-zinc-800/80"} ${tint}`}
+                          className={`p-0 border-b border-r ${d.date < localISODate() && !isPending && !d.special ? "opacity-50" : ""} ${isToday ? "border-blue-700/30" : "border-zinc-800/80"} ${tint}`}
                         >
                           {readOnly ? (
                             <div className="h-10 sm:h-9 flex items-center justify-center">{symbol}</div>

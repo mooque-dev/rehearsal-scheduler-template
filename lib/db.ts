@@ -75,6 +75,44 @@ export async function ensureSchema(): Promise<void> {
           key TEXT PRIMARY KEY,
           value TEXT
         );
+        -- Teams are the tabs (people.department holds a team's key).
+        CREATE TABLE IF NOT EXISTS teams (
+          id SERIAL PRIMARY KEY,
+          season INTEGER NOT NULL DEFAULT 1,
+          key TEXT NOT NULL,
+          name_en TEXT NOT NULL,
+          name_ko TEXT NOT NULL,
+          uses_roles BOOLEAN NOT NULL DEFAULT false,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          UNIQUE (season, key)
+        );
+        CREATE TABLE IF NOT EXISTS venues (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          address TEXT
+        );
+        -- One row per scheduled date (a column in the table).
+        CREATE TABLE IF NOT EXISTS sessions (
+          id SERIAL PRIMARY KEY,
+          season INTEGER NOT NULL DEFAULT 1,
+          date TEXT NOT NULL,
+          title TEXT,
+          time TEXT,
+          venue_id INTEGER REFERENCES venues(id) ON DELETE SET NULL,
+          is_performance BOOLEAN NOT NULL DEFAULT false,
+          special BOOLEAN NOT NULL DEFAULT false,
+          all_hands BOOLEAN NOT NULL DEFAULT false,
+          roles TEXT,
+          teams TEXT,
+          UNIQUE (season, date)
+        );
+        CREATE TABLE IF NOT EXISTS breaks (
+          id SERIAL PRIMARY KEY,
+          season INTEGER NOT NULL DEFAULT 1,
+          from_date TEXT NOT NULL,
+          to_date TEXT NOT NULL,
+          label TEXT
+        );
       `);
       // a second group someone also belongs to (shown as a small badge on their one row)
       await query("ALTER TABLE people ADD COLUMN IF NOT EXISTS also_role TEXT");
@@ -85,6 +123,25 @@ export async function ensureSchema(): Promise<void> {
     })();
   }
   return bootstrapped;
+}
+
+export type Q = <T = Record<string, unknown>>(text: string, params?: unknown[]) => Promise<T[]>;
+
+/** Run several statements atomically; `q` runs on one connection inside BEGIN/COMMIT. */
+export async function withTransaction<R>(fn: (q: Q) => Promise<R>): Promise<R> {
+  const client = await getPool().connect();
+  const q: Q = async (text, params) => (await client.query(text, params)).rows;
+  try {
+    await client.query("BEGIN");
+    const result = await fn(q);
+    await client.query("COMMIT");
+    return result;
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 export async function getCurrentSeason(): Promise<number> {

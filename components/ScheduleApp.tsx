@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "@/lib/prefs";
-import { t, STATUS_CYCLE, STATUS_CYCLE_UNSET, seasonDeptLabel, type DepartmentKey } from "@/lib/i18n";
+import { t, STATUS_CYCLE, STATUS_CYCLE_UNSET, teamLabel, type DepartmentKey } from "@/lib/i18n";
 import type { Person, Notice, UpdateLogEntry } from "@/lib/types";
-import type { SeasonDate } from "@/lib/season";
+import type { SeasonDate, SiteSettings, Team } from "@/lib/season";
 import OnboardingModal from "@/components/OnboardingModal";
 import SettingsModal from "@/components/SettingsModal";
 import NoticesModal from "@/components/NoticesModal";
@@ -41,11 +42,13 @@ function loadSeenNoticeIds(): Set<number> {
 }
 
 export default function ScheduleApp() {
-  const { prefs, ready } = usePreferences();
+  const { prefs, setPrefs, ready } = usePreferences();
   const lang = prefs.lang;
   const ko = lang === "ko";
   const l = (k: Parameters<typeof t>[1]) => t(lang, k);
-  const deptLabel = (d: DepartmentKey) => seasonDeptLabel(d, lang);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [site, setSite] = useState<SiteSettings | null>(null);
+  const deptLabel = (d: DepartmentKey) => teamLabel(teams, d, lang);
   const { toast, show: showToast } = useToast();
 
   const [people, setPeople] = useState<Person[]>([]);
@@ -91,7 +94,9 @@ export default function ScheduleApp() {
   }
 
   useEffect(() => {
-    if (ready) {
+    // only reload when the tab actually changes: setting loading for the team
+    // already on screen would never clear (no new fetch runs)
+    if (ready && prefs.department !== department) {
       resetEdits();
       setRoleFilter("All");
       setLoading(true);
@@ -106,6 +111,8 @@ export default function ScheduleApp() {
     showStart: string | null;
     defaultStatus?: "yes" | "unset";
     breaks?: { from: string; to: string }[];
+    teams?: Team[];
+    site?: SiteSettings;
     responses: { person_id: number; date: string; status: string }[];
     logs: UpdateLogEntry[];
     notices: Notice[];
@@ -113,6 +120,8 @@ export default function ScheduleApp() {
     setPeople(data.people);
     setDates(data.dates);
     setShowStart(data.showStart ?? null);
+    setTeams(data.teams ?? []);
+    setSite(data.site ?? null);
     setDefaultStatus(data.defaultStatus ?? "yes");
     setBreaks(data.breaks ?? []);
     setLogs(data.logs);
@@ -260,6 +269,18 @@ export default function ScheduleApp() {
     }
   }
 
+  const usesRoles = !!teams.find((tm) => tm.key === department)?.uses_roles;
+
+  // a remembered team that no longer exists (renamed or removed on /admin) falls back to the first one
+  useEffect(() => {
+    if (!loading && teams.length > 0 && !teams.some((tm) => tm.key === department)) {
+      setLoading(true);
+      setDepartment(teams[0].key);
+      setPrefs({ department: teams[0].key });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, teams, department]);
+
   const filteredPeople = people.filter((p) => {
     if (roleFilter === "All") return true;
     const effective = pendingRoles.has(p.id) ? pendingRoles.get(p.id) : p.role;
@@ -289,7 +310,7 @@ export default function ScheduleApp() {
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <Logo className="w-10 sm:w-12" />
               <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-100 leading-tight">{l("title")}</h1>
+              <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-zinc-100 leading-tight">{site?.title[lang] || l("title")}</h1>
               <DDayCounter lang={lang} showStart={showStart} />
               </div>
             </div>
@@ -325,6 +346,7 @@ export default function ScheduleApp() {
         </header>
 
         <DeptTabs
+          keys={teams.map((tm) => tm.key)}
           value={department}
           onChange={requestDepartment}
           labelFor={deptLabel}
@@ -344,13 +366,20 @@ export default function ScheduleApp() {
           }
         />
 
-        {department === "actors" && (
+        {usesRoles && (
           <div className="mb-3 sm:mb-4 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 [scrollbar-width:none]">
             <RoleFilterChips active={roleFilter} onChange={setRoleFilter} lang={lang} />
           </div>
         )}
 
-        {people.length === 0 ? (
+        {teams.length === 0 ? (
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-12 text-center text-sm text-zinc-400 space-y-3">
+            <p>{ko ? "아직 팀이 없어요. 관리 페이지에서 팀, 멤버, 일정을 만들어 주세요." : "No teams yet. Set up teams, members and dates on the admin page."}</p>
+            <Link href="/admin" className="inline-flex items-center min-h-11 px-4 rounded-xl bg-blue-600 text-white font-semibold">
+              {ko ? "관리 페이지 열기" : "Open admin"}
+            </Link>
+          </div>
+        ) : people.length === 0 ? (
           <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-12 text-center text-sm text-zinc-400">
             {l("noPeopleYet")}
           </div>
@@ -365,6 +394,7 @@ export default function ScheduleApp() {
             pendingRoles={pendingRoles}
             lang={lang}
             department={department}
+            usesRoles={usesRoles}
             lastToggled={lastToggled}
             defaultStatus={defaultStatus}
             onNameClick={(id) => {
@@ -374,7 +404,7 @@ export default function ScheduleApp() {
           />
         )}
 
-        <StatusLegend lang={lang} showRoles={department === "actors"} showUnset={defaultStatus === "unset"} showAlso={people.some((p) => !!p.also_role)} />
+        <StatusLegend lang={lang} showRoles={usesRoles} showUnset={defaultStatus === "unset"} showAlso={people.some((p) => !!p.also_role)} />
 
         <div className="mt-5 sm:mt-6">
           <UpdateLog logs={logs} lang={lang} onRevert={doRevert} />
@@ -395,7 +425,7 @@ export default function ScheduleApp() {
         </div>
       </div>
 
-      <OnboardingModal />
+      <OnboardingModal teams={teams} />
       <WhoSavingModal
         key={saveSheetKey}
         open={whoSavingOpen}
@@ -409,10 +439,11 @@ export default function ScheduleApp() {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        departmentLabels={{ marketing: deptLabel("marketing") }}
+        teams={teams}
       />
       <NoticesModal notices={notices} lang={lang} open={noticesOpen} onClose={() => setNoticesOpen(false)} />
       <AttendanceSummary
+        usesRoles={usesRoles}
         open={summaryOpen}
         onClose={() => setSummaryOpen(false)}
         people={people}

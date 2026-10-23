@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, ensureSchema, getCurrentSeason, DbNotConfiguredError } from "@/lib/db";
 import { loadSchedule } from "./shared";
-import { getSeasonConfig } from "@/lib/season";
-import type { DepartmentKey } from "@/lib/i18n";
+import { getDefaultStatus } from "@/lib/data";
 
-const VALID_DEPARTMENTS: DepartmentKey[] = ["actors", "production", "marketing"];
-
-function isValidDepartment(d: string | null): d is DepartmentKey {
-  return !!d && (VALID_DEPARTMENTS as string[]).includes(d);
+// Team keys are lowercase slugs chosen in /admin; the GET only checks the shape,
+// writes check the team really exists.
+function isValidDepartment(d: string | null): d is string {
+  return !!d && /^[a-z0-9_-]{1,40}$/.test(d);
 }
 
 export async function GET(req: NextRequest) {
@@ -86,7 +85,7 @@ export async function POST(req: NextRequest) {
   try {
     await ensureSchema();
     const season = await getCurrentSeason();
-    const defaultStatus = getSeasonConfig(season).defaultStatus;
+    const defaultStatus = await getDefaultStatus();
     // "unset" only exists in seasons that start everyone at "not selected"
     if (defaultStatus === "yes" && statusChanges.some((c) => c.status === "unset")) {
       return NextResponse.json({ error: "invalid_status" }, { status: 400 });
@@ -99,7 +98,8 @@ export async function POST(req: NextRequest) {
       [season, department]
     );
     const memberIds = new Set(members.map((m) => m.id));
-    const seasonDates = new Set(getSeasonConfig(season).dates.map((d) => d.date));
+    const sessionRows = await query<{ date: string }>("SELECT date FROM sessions WHERE season = $1", [season]);
+    const seasonDates = new Set(sessionRows.map((d) => d.date));
     const statusOk = statusChanges.every((c) => memberIds.has(c.person_id) && seasonDates.has(c.date));
     const rolesOk = roleChanges.every(
       (r) => memberIds.has(r.personId) && (r.role === null || VALID_ROLES.includes(r.role))

@@ -1,7 +1,8 @@
 "use client";
 
 import { usePreferences } from "@/lib/prefs";
-import { t, DEPARTMENTS, type DepartmentKey } from "@/lib/i18n";
+import { t, teamLabel } from "@/lib/i18n";
+import type { Team } from "@/lib/season";
 import { Button, FieldLabel, Segmented, Sheet } from "@/components/ui";
 
 const FONT_SAMPLE_CLASS: Record<string, string> = {
@@ -14,12 +15,12 @@ export default function SettingsModal({
   open,
   onClose,
   showDepartment = true,
-  departmentLabels,
+  teams = [],
 }: {
   open: boolean;
   onClose: () => void;
   showDepartment?: boolean;
-  departmentLabels?: Partial<Record<DepartmentKey, string>>;
+  teams?: Team[];
 }) {
   const { prefs, setPrefs } = usePreferences();
   const l = (k: Parameters<typeof t>[1]) => t(prefs.lang, k);
@@ -78,17 +79,24 @@ export default function SettingsModal({
           />
         </div>
 
-        {showDepartment && (
+        {showDepartment && teams.length > 0 && (
           <div>
             <FieldLabel>{l("department")}</FieldLabel>
             <Segmented
               label={l("department")}
               value={prefs.department}
               onChange={(v) => setPrefs({ department: v })}
-              options={DEPARTMENTS.map((d) => ({ value: d, label: departmentLabels?.[d] ?? l(d) }))}
+              options={teams.map((tm) => ({ value: tm.key, label: teamLabel(teams, tm.key, prefs.lang) }))}
             />
           </div>
         )}
+        <a
+          href="/admin"
+          className="press flex items-center justify-between min-h-12 px-3.5 rounded-xl border border-zinc-700 bg-zinc-800/60 text-sm font-medium text-zinc-200 hover:bg-zinc-800"
+        >
+          <span>{prefs.lang === "ko" ? "관리 페이지 (팀·멤버·일정)" : "Admin (teams, members, dates)"}</span>
+          <span aria-hidden="true">→</span>
+        </a>
       </div>
     </Sheet>
   );

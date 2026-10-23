@@ -1,5 +1,6 @@
 import { query, ensureSchema } from "@/lib/db";
-import { getSeasonConfig, type SeasonDate } from "@/lib/season";
+import type { SeasonBreak, SeasonDate, SiteSettings, Team } from "@/lib/season";
+import { getBreaks, getDefaultStatus, getSeasonDates, getSiteSettings, getTeams } from "@/lib/data";
 import type { Person, Absence, Notice, UpdateLogEntry, LogChange } from "@/lib/types";
 
 export interface ScheduleResponse {
@@ -7,7 +8,9 @@ export interface ScheduleResponse {
   dates: SeasonDate[];
   showStart: string | null;
   defaultStatus: "yes" | "unset";
-  breaks: { from: string; to: string }[];
+  breaks: SeasonBreak[];
+  teams: Team[];
+  site: SiteSettings;
   responses: { person_id: number; date: string; status: string }[];
   logs: UpdateLogEntry[];
   notices: Notice[];
@@ -91,13 +94,22 @@ export async function loadSchedule(department: string, season: number): Promise<
     ),
     query<Notice>("SELECT * FROM notices WHERE season = $1 ORDER BY notice_date DESC", [season]),
   ]);
-  const config = getSeasonConfig(season);
+  const [dates, breaks, teams, site, defaultStatus] = await Promise.all([
+    getSeasonDates(season),
+    getBreaks(season),
+    getTeams(season),
+    getSiteSettings(),
+    getDefaultStatus(),
+  ]);
+  const firstShow = dates.find((d) => d.isPerformance);
   return {
     people,
-    dates: config.dates,
-    showStart: config.showStart,
-    defaultStatus: config.defaultStatus,
-    breaks: config.breaks,
+    dates,
+    showStart: firstShow ? `${firstShow.date}T00:00:00` : null,
+    defaultStatus,
+    breaks,
+    teams,
+    site,
     responses,
     logs: await withDetails(logs),
     notices,

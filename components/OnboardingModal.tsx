@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { usePreferences } from "@/lib/prefs";
-import { STRINGS, DEPARTMENTS, seasonDeptLabel, type Lang } from "@/lib/i18n";
+import { STRINGS, teamLabel, type Lang } from "@/lib/i18n";
+import type { Team } from "@/lib/season";
 import { Button, FieldLabel, Logo, Segmented, Sheet } from "@/components/ui";
 
-export default function OnboardingModal() {
+export default function OnboardingModal({ teams }: { teams: Team[] }) {
   const { prefs, setPrefs, ready } = usePreferences();
   const [lang, setLang] = useState<Lang>(prefs.lang);
   const [theme, setTheme] = useState(prefs.theme);
   const [department, setDepartment] = useState(prefs.department);
+  const choice = teams.some((tm) => tm.key === department) ? department : (teams[0]?.key ?? department);
 
   if (!ready || prefs.onboarded) return null;
   const r = STRINGS[lang];
@@ -53,21 +55,21 @@ export default function OnboardingModal() {
             ]}
           />
         </div>
-        <div>
+        {teams.length > 0 && <div>
           <FieldLabel>{r.department}</FieldLabel>
           <Segmented
             label={r.department}
-            value={department}
+            value={choice}
             onChange={setDepartment}
-            options={DEPARTMENTS.map((d) => ({ value: d, label: seasonDeptLabel(d, lang) }))}
+            options={teams.map((tm) => ({ value: tm.key, label: teamLabel(teams, tm.key, lang) }))}
           />
-        </div>
+        </div>}
       </div>
 
       <Button
         variant="primary"
         className="w-full mt-6 min-h-12"
-        onClick={() => setPrefs({ lang, theme, department, onboarded: true })}
+        onClick={() => setPrefs({ lang, theme, department: choice, onboarded: true })}
       >
         {r.continue}
       </Button>

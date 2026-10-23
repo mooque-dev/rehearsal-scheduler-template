@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { query, ensureSchema, getCurrentSeason, DbNotConfiguredError } from "@/lib/db";
 import { loadSchedule } from "../shared";
 import { checkRevertPassword } from "@/lib/adminAuth";
-import type { DepartmentKey } from "@/lib/i18n";
 
-const VALID_DEPARTMENTS: DepartmentKey[] = ["actors", "production", "marketing"];
 
 export async function POST(req: NextRequest) {
   let body: { logId?: number; revertedBy?: string; department?: string; password?: string };
@@ -14,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
   const { logId, revertedBy, department, password } = body;
-  if (!logId || !revertedBy?.trim() || !(VALID_DEPARTMENTS as string[]).includes(department ?? "")) {
+  if (!logId || !revertedBy?.trim() || !/^[a-z0-9_-]{1,40}$/.test(department ?? "")) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
 
@@ -79,7 +77,7 @@ export async function POST(req: NextRequest) {
       [revertedBy.trim(), `Reverted: ${log.summary}`, season]
     );
 
-    const data = await loadSchedule(department as DepartmentKey, season);
+    const data = await loadSchedule(department!, season);
     return NextResponse.json(data);
   } catch (e) {
     if (e instanceof DbNotConfiguredError) {

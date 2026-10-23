@@ -22,53 +22,48 @@ You need Node 22.18+, a free [Neon](https://neon.com) (or any Postgres) database
 3. **Configure the environment.**
    ```bash
    npm install
-   cp .env.example .env.local     # then fill in DATABASE_URL, ARCHIVE_PIN, REVERT_PASSWORD
+   cp .env.example .env.local     # then fill in DATABASE_URL, ADMIN_PASSWORD, ARCHIVE_PIN
    ```
-4. **Load the sample company** (creates the tables, adds 18 fictional people and 3 notices):
+4. **Load the sample company** (creates the tables; adds 3 teams, 18 fictional people, a season of dates and 3 notices):
    ```bash
    npm run seed
    npm run dev                    # http://localhost:3000
    ```
-5. **Deploy.** Import the repo into Vercel, add the same three environment variables,
-   deploy. Every push to `main` redeploys.
+5. **Deploy.** Import the repo into Vercel, add the same environment variables, deploy. Every
+   push to `main` redeploys. Then open `/admin` on your site to set up your own company.
 
-When you are ready for real data: `npm run seed -- --reset` clears the sample people, notices and
-attendance (it asks for nothing, so only run it on a database you can lose), then add your own.
+When you are ready for real data, delete the sample people, dates and notices on /admin (or run
+`npm run seed -- --reset` and edit from there), then add your own. Skipping the seed entirely also works:
+an empty database shows a link to /admin.
 
-## Make it yours
+## Make it yours — on /admin, no code
 
-Everything that names your group lives in a few files — nothing else needs editing.
+Open **/admin** (or Settings → Admin) and sign in with `ADMIN_PASSWORD`. From there you can:
 
-| What | Where |
+| Tab | What you can change |
 | --- | --- |
-| Show name, team tab names, browser-storage prefix | `lib/site.config.ts` |
-| Rehearsal dates, hours, venues, breaks, special sessions, performance dates | `lib/season.ts` |
-| Links and standing info in the Resources panel | `lib/resources.ts` |
-| Logo (drawn as SVG paths) | `lib/logoPaths.ts`, then regenerate the icons below |
-| Icons and share preview | `app/icon.svg`, `app/icon.png`, `app/apple-icon.png`, `app/opengraph-image.png` |
-| Wording, in English and Korean | `lib/i18n.ts` |
-| Colours and themes | `app/globals.css` |
+| **Members** | Add, edit, reorder and remove people; pick their team, role (leads / ensemble / coach), A/B cast, a second group, a character or position |
+| **Teams** | Add, rename (English and Korean), reorder and remove teams; "group by role" splits a team into leads, ensemble and coaches |
+| **Schedule** | Add repeating dates (every week or every 2 weeks on a chosen day, between two dates, skipping breaks), add or edit single dates (what, time, venue, performance, special session, everyone-attends ★, which teams/roles attend), breaks, venues |
+| **Notices** | Add, edit and remove notices (Markdown-style links: `[Map](https://…)`) |
+| **General** | The name shown on the schedule, and whether unanswered cells mean "–" or "✓"; on a demo, "Reset demo" |
 
-**Logo and icons.** Copy each `<path d="…">` from your SVG into `lib/logoPaths.ts` (viewBox
-`0 0 217 141` is assumed; adjust `viewBox` in `components/ui.tsx` for another ratio). Replace the
-four image files in `app/` with your own at the same sizes (512×512, 512×512, 180×180, 1200×630).
+Moving a date keeps the answers already given; deleting a date or a member removes their answers.
 
-**People.** Stored in the `people` table: `name`, `department` (`actors`, `production` or
-`marketing` — shown under the labels in `site.config.ts`), `role` (`Main/Sub`, `Ensemble`,
-`Coach`, or empty), `team` (`A`/`B`), `character_name` (for coaches, `spec:music`, `spec:vocal`
-or `spec:acting`), `also_role` (a second group, shown as a small badge) and `sort_order`. Edit
-rows in the Neon console or a SQL client; `scripts/seed.mjs` shows the shape. There is no admin
-screen yet.
+Still in code (rarely changes): links in the Resources panel (`lib/resources.ts`), the logo (`lib/logoPaths.ts`
+plus the four image files in `app/`), wording (`lib/i18n.ts`) and colours (`app/globals.css`). To replace the logo,
+copy each `<path d="…">` from your SVG into `lib/logoPaths.ts` (viewBox `0 0 217 141`) and replace `app/icon.svg`,
+`app/icon.png` (512×512), `app/apple-icon.png` (180×180) and `app/opengraph-image.png` (1200×630).
 
-**Notices.** Rows in the `notices` table (`title`, `content`, `notice_date`, `time_info`).
-`content` supports Markdown-style links: `[Map](https://…)`.
+**Running a public demo?** Set `DEMO_MODE=1`: the admin password is shown on the sign-in screen so visitors can try
+everything, and General gets a "Reset demo" button.
 
 ## How attendance works
 
 Each cell is **–** (not selected), **✓** or **✕**. Only answers are stored (`absences` table);
 a missing row means the season's default (`defaultStatus` in `lib/season.ts`). Marking ✕
 requires a reason. Every save writes an entry to the Update Log with the previous values, and
-an admin can revert it with `REVERT_PASSWORD`.
+an admin can revert it with `ADMIN_PASSWORD`.
 
 Anyone with the link can edit anyone's attendance — that keeps it frictionless for a small
 company, and the log plus revert is the safety net. If you need more control, put the site
@@ -76,10 +71,9 @@ behind your host's password protection or add authentication before the first re
 
 ## Seasons and the archive
 
-A season's dates live in `lib/season.ts`; its people, notices and attendance live in the
-database under a `season` number. To start season 2: copy the season-1 builder to `2`, add
-season-2 people (`season = 2`), and set the database value `_meta.current_season` to `2`.
-Season 1 then appears read-only at `/archive` behind `ARCHIVE_PIN`.
+Everything on /admin belongs to the current season (`_meta.current_season`, default 1). To start
+season 2, set that value to `2` in the database and build the new season on /admin; season 1 stays
+readable at `/archive` behind `ARCHIVE_PIN`.
 
 ## Scripts
 
