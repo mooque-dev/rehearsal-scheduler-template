@@ -1,11 +1,13 @@
 // What GET /api/admin returns: the editable setup of the current season.
 import type { SiteSettings } from "@/lib/season";
+import type { Brand } from "@/lib/brand";
 
 export interface AdminState {
   season: number;
   demo: boolean;
   site: SiteSettings;
   defaultStatus: "yes" | "unset";
+  brand: Brand;
   teams: { id: number; key: string; name_en: string; name_ko: string; uses_roles: boolean; sort_order: number; members: number }[];
   venues: { id: number; name: string; address: string | null }[];
   sessions: {

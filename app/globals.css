@@ -64,6 +64,12 @@ body {
   /* the unsaved-changes banner's text — was never remapped, so it rendered
      pale blue on a pale-blue wash in light theme */
   --color-blue-300: #1d4ed8;
+  /* special-session (violet) labels and washes were never remapped either:
+     pale violet text on a lilac wash in light theme */
+  --color-violet-200: #5b21b6;
+  --color-violet-300: #6d28d9;
+  --color-violet-900: #ede9fe;
+  --color-violet-950: #f5f3ff;
 }
 
 /* Font size preference scales the rem-based Tailwind type scale globally */

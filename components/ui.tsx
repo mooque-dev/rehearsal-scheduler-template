@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { SITE } from "@/lib/site.config";
+import { useBrand } from "@/components/BrandProvider";
 import { LOGO_PATHS } from "@/lib/logoPaths";
 import type { Lang } from "@/lib/i18n";
 
@@ -386,6 +387,18 @@ export function useToast() {
 // The production mark, drawn in the current text colour so it follows the theme
 // (white on dark, near-black on light). Size it with a width class.
 export function Logo({ className = "w-11" }: { className?: string }) {
+  const brand = useBrand();
+  if (brand.logoVersion) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={`/api/brand/logo?v=${brand.logoVersion}`}
+        alt={SITE.title.en}
+        className={`${className} h-auto shrink-0 select-none object-contain`}
+        draggable={false}
+      />
+    );
+  }
   return (
     <svg
       viewBox="0 0 217 141"

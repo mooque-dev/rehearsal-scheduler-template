@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "@/lib/prefs";
+import { useBrand } from "@/components/BrandProvider";
 import { t, STATUS_CYCLE, STATUS_CYCLE_UNSET, teamLabel, type DepartmentKey } from "@/lib/i18n";
 import type { Person, Notice, UpdateLogEntry } from "@/lib/types";
 import type { SeasonDate, SiteSettings, Team } from "@/lib/season";
@@ -43,6 +44,7 @@ function loadSeenNoticeIds(): Set<number> {
 
 export default function ScheduleApp() {
   const { prefs, setPrefs, ready } = usePreferences();
+  const centered = useBrand().header === "centered";
   const lang = prefs.lang;
   const ko = lang === "ko";
   const l = (k: Parameters<typeof t>[1]) => t(lang, k);
@@ -306,6 +308,29 @@ export default function ScheduleApp() {
     <div className="min-h-dvh bg-zinc-950 text-zinc-100 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:pb-0">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 pb-6">
         <header className="mb-4 sm:mb-5">
+          {centered ? (
+            <>
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2">
+              {notices.length > 0 && (
+                <IconButton label={l("notices")} icon="bell" onClick={openNotices} badge={upcomingUnseenCount} />
+              )}
+              <IconButton label={l("calendar")} icon="calendar" onClick={() => setCalendarOpen(true)} />
+              <IconButton label={l("resources")} icon="link" onClick={() => setResourcesOpen(true)}>
+                <span className="hidden sm:inline text-xs font-medium">{l("resources")}</span>
+              </IconButton>
+              <IconButton label={l("settings")} icon="gear" onClick={() => setSettingsOpen(true)} />
+              <div className="hidden sm:flex items-center gap-2 ml-1">
+                {hasUnsaved && <DiscardButton label={discardLabel} onClick={resetEdits} />}
+                <SaveButton count={changeCount} label={l("save")} onClick={openSaveSheet} />
+              </div>
+            </div>
+              <div className="flex flex-col items-center text-center gap-2 mt-1">
+                <Logo className="w-16 sm:w-20" />
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 leading-tight">{site?.title[lang] || l("title")}</h1>
+                <DDayCounter lang={lang} showStart={showStart} />
+              </div>
+            </>
+          ) : (
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <Logo className="w-10 sm:w-12" />
@@ -329,7 +354,8 @@ export default function ScheduleApp() {
               </div>
             </div>
           </div>
-          <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">
+          )}
+          <p className={`text-sm text-zinc-400 mt-1.5 leading-relaxed ${centered ? "text-center" : ""}`}>
             {l("tapToCycle")} <span className="text-emerald-500 font-semibold">✓</span> {l("yes")}
             <span className="text-zinc-500" aria-hidden="true"> → </span>
             <span className="text-red-400 font-semibold">✕</span> {l("no")}

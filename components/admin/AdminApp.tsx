@@ -10,9 +10,10 @@ import { t, displayCharacterName } from "@/lib/i18n";
 import { inBreak, weeklyDates } from "@/lib/season";
 import type { AdminState } from "@/lib/adminTypes";
 import { Button, Icon, Logo, Segmented, Sheet, useToast, LoadingScreen, ErrorScreen } from "@/components/ui";
+import BrandingSection from "@/components/admin/BrandingSection";
 import { Badge, ChipPicker, DeleteButton, MoveButtons, Row, SelectField, TextField, Toggle } from "@/components/admin/fields";
 
-type Tab = "members" | "teams" | "schedule" | "notices" | "general";
+type Tab = "members" | "teams" | "schedule" | "notices" | "branding" | "general";
 type Person = AdminState["people"][number];
 type TeamRow = AdminState["teams"][number];
 type Session = AdminState["sessions"][number];
@@ -72,6 +73,7 @@ export default function AdminApp() {
     team_not_empty: tx("멤버가 있는 팀은 삭제할 수 없어요. 먼저 멤버를 옮기거나 삭제하세요.", "Move or remove this team's members first."),
     end_before_start: tx("끝 날짜가 시작 날짜보다 빨라요.", "The end date is before the start date."),
     unknown_team: tx("팀을 선택해 주세요.", "Please pick a team."),
+    invalid_image: tx("이미지를 올리지 못했어요. 더 작은 PNG, JPG 또는 SVG로 해 주세요.", "Couldn't use that image. Try a smaller PNG, JPG or SVG."),
   };
 
   /** Run one admin action; returns true when it worked. */
@@ -136,6 +138,7 @@ export default function AdminApp() {
     { key: "teams", label: tx("팀", "Teams") },
     { key: "schedule", label: tx("일정", "Schedule") },
     { key: "notices", label: tx("공지", "Notices") },
+    { key: "branding", label: tx("브랜딩", "Branding") },
     { key: "general", label: tx("기본 설정", "General") },
   ];
 
@@ -400,6 +403,7 @@ export default function AdminApp() {
           {tab === "teams" && teamsSection}
           {tab === "schedule" && schedule}
           {tab === "notices" && notices}
+          {tab === "branding" && <BrandingSection state={state} tx={tx} lang={lang} busy={busy} act={act} onToast={show} />}
           {tab === "general" && general}
         </div>
       </div>

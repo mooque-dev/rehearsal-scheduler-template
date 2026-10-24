@@ -30,19 +30,21 @@ interface Ctx {
 
 const PreferencesContext = createContext<Ctx | null>(null);
 
-export function PreferencesProvider({ children }: { children: ReactNode }) {
+export function PreferencesProvider({ children, defaultTheme }: { children: ReactNode; defaultTheme?: "dark" | "light" }) {
   const [prefs, setPrefsState] = useState<Prefs>(DEFAULT_PREFS);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
+      // first visit: the company's chosen theme; afterwards, the person's own choice
       if (raw) setPrefsState({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
+      else if (defaultTheme) setPrefsState({ ...DEFAULT_PREFS, theme: defaultTheme });
     } catch {
       // ignore malformed storage
     }
     setReady(true);
-  }, []);
+  }, [defaultTheme]);
 
   useEffect(() => {
     // wait for stored prefs: applying the defaults first would flip a light-

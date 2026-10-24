@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { SITE, storageKey } from "@/lib/site.config";
+import { getBrandSafe, getSiteSettingsSafe } from "@/lib/data";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,12 +14,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: SITE.title.en,
-  description: SITE.description,
-  openGraph: { title: SITE.title.en, description: SITE.description, siteName: SITE.title.en },
-  appleWebApp: { title: SITE.shortName, capable: true, statusBarStyle: "black-translucent" },
-};
+// The name and icon come from /admin (site name, uploaded logo), with the
+// defaults in site.config.ts when nothing is set or the database is unreachable.
+export async function generateMetadata(): Promise<Metadata> {
+  const [site, brand] = await Promise.all([getSiteSettingsSafe(), getBrandSafe()]);
+  const logo = brand.logoVersion ? `/api/brand/logo?v=${brand.logoVersion}` : null;
+  return {
+    title: site.title.en,
+    description: SITE.description,
+    openGraph: { title: site.title.en, description: SITE.description, siteName: site.title.en },
+    appleWebApp: { title: site.title.en, capable: true, statusBarStyle: "black-translucent" },
+    ...(logo ? { icons: { icon: logo, apple: logo } } : {}),
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

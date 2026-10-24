@@ -106,6 +106,13 @@ export async function ensureSchema(): Promise<void> {
           teams TEXT,
           UNIQUE (season, date)
         );
+        -- Uploaded brand images (the logo), served by /api/brand/logo.
+        CREATE TABLE IF NOT EXISTS assets (
+          key TEXT PRIMARY KEY,
+          mime TEXT NOT NULL,
+          data BYTEA NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
         CREATE TABLE IF NOT EXISTS breaks (
           id SERIAL PRIMARY KEY,
           season INTEGER NOT NULL DEFAULT 1,

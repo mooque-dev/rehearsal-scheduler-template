@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, ensureSchema, getCurrentSeason, withTransaction, DbNotConfiguredError, type Q } from "@/lib/db";
 import { verifyAdminToken, isDemo, ADMIN_COOKIE } from "@/lib/adminAuth";
-import { getSiteSettings, getDefaultStatus, setMeta } from "@/lib/data";
+import { getSiteSettings, getDefaultStatus, getBrand, setMeta } from "@/lib/data";
+import { normalizeBrand } from "@/lib/brand";
 import { weeklyDates, inBreak } from "@/lib/season";
 import { seedSample } from "@/lib/seed";
 import type { AdminState } from "@/lib/adminTypes";
@@ -57,9 +58,10 @@ function slug(name: string): string {
 }
 
 async function loadState(season: number): Promise<AdminState> {
-  const [site, defaultStatus, teams, venues, sessions, breaks, people, notices] = await Promise.all([
+  const [site, defaultStatus, brand, teams, venues, sessions, breaks, people, notices] = await Promise.all([
     getSiteSettings(),
     getDefaultStatus(),
+    getBrand(),
     query<AdminState["teams"][number]>(
       `SELECT t.id, t.key, t.name_en, t.name_ko, t.uses_roles, t.sort_order,
               (SELECT count(*)::int FROM people p WHERE p.season = t.season AND p.department = t.key) AS members
@@ -90,6 +92,7 @@ async function loadState(season: number): Promise<AdminState> {
     demo: isDemo(),
     site,
     defaultStatus,
+    brand,
     teams,
     venues,
     sessions: sessions.map((s) => ({ ...s, teams: parse(s.teams as string | null), roles: parse(s.roles as string | null) })),
@@ -340,9 +343,36 @@ export async function POST(req: NextRequest) {
           break;
         }
 
+        case "brand.save": {
+          const current = await getBrand();
+          // the logo is managed by its own actions; keep whatever is stored
+          await setMeta("brand", JSON.stringify({ ...normalizeBrand(b.brand), logoVersion: current.logoVersion }));
+          break;
+        }
+        case "brand.logo": {
+          const m = typeof b.dataUrl === "string" ? b.dataUrl.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/) : null;
+          if (!m) throw new BadRequest("invalid_image");
+          const bytes = Buffer.from(m[1], "base64");
+          // a real PNG, at most 400 KB (the browser resizes to 512 px before sending)
+          if (bytes.length > 400_000 || bytes.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") throw new BadRequest("invalid_image");
+          await q(
+            "INSERT INTO assets (key, mime, data) VALUES ('logo', 'image/png', $1) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data, updated_at = now()",
+            [bytes]
+          );
+          await setMeta("brand", JSON.stringify({ ...(await getBrand()), logoVersion: Date.now() }));
+          break;
+        }
+        case "brand.logoRemove": {
+          await q("DELETE FROM assets WHERE key = 'logo'");
+          await setMeta("brand", JSON.stringify({ ...(await getBrand()), logoVersion: null }));
+          break;
+        }
+
         case "demo.reset": {
           if (!isDemo()) throw new BadRequest("not_demo");
           await seedSample(q, season);
+          await q("DELETE FROM assets WHERE key = 'logo'");
+          await q("DELETE FROM _meta WHERE key = 'brand'");
           break;
         }
 

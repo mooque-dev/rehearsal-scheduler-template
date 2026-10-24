@@ -1,5 +1,6 @@
 // Server-side loaders for the season setup that /admin edits.
-import { query } from "@/lib/db";
+import { query, ensureSchema } from "@/lib/db";
+import { DEFAULT_BRAND, normalizeBrand, type Brand } from "@/lib/brand";
 import { SITE } from "@/lib/site.config";
 import { dateLabel, dayOfWeek, type SeasonBreak, type SeasonDate, type SiteSettings, type Team } from "@/lib/season";
 
@@ -83,4 +84,33 @@ export async function getBreaks(season: number): Promise<SeasonBreak[]> {
     [season]
   );
   return rows.map((b) => ({ from: b.from_date, to: b.to_date, label: b.label }));
+}
+
+export async function getBrand(): Promise<Brand> {
+  const raw = await getMeta("brand");
+  if (!raw) return DEFAULT_BRAND;
+  try {
+    return normalizeBrand(JSON.parse(raw));
+  } catch {
+    return DEFAULT_BRAND;
+  }
+}
+
+/** For pages and metadata: never let a missing database break rendering. */
+export async function getBrandSafe(): Promise<Brand> {
+  try {
+    await ensureSchema();
+    return await getBrand();
+  } catch {
+    return DEFAULT_BRAND;
+  }
+}
+
+export async function getSiteSettingsSafe(): Promise<SiteSettings> {
+  try {
+    await ensureSchema();
+    return await getSiteSettings();
+  } catch {
+    return { title: { en: SITE.title.en, ko: SITE.title.ko } };
+  }
 }

@@ -46,14 +46,14 @@ Open **/admin** (or Settings → Admin) and sign in with `ADMIN_PASSWORD`. From 
 | **Teams** | Add, rename (English and Korean), reorder and remove teams; "group by role" splits a team into leads, ensemble and coaches |
 | **Schedule** | Add repeating dates (every week or every 2 weeks on a chosen day, between two dates, skipping breaks), add or edit single dates (what, time, venue, performance, special session, everyone-attends ★, which teams/roles attend), breaks, venues |
 | **Notices** | Add, edit and remove notices (Markdown-style links: `[Map](https://…)`) |
+| **Branding** | Start from a look (Stage, Paper, Neon, Garden), upload a logo (also the app icon), pick any accent colour, a background tone, the theme it opens in, heading and body fonts, corners and header layout; a live preview and a readability check (WCAG AA) that adjusts colours or blocks publishing when text would be hard to read. The admin page itself stays neutral. |
 | **General** | The name shown on the schedule, and whether unanswered cells mean "–" or "✓"; on a demo, "Reset demo" |
 
 Moving a date keeps the answers already given; deleting a date or a member removes their answers.
 
-Still in code (rarely changes): links in the Resources panel (`lib/resources.ts`), the logo (`lib/logoPaths.ts`
-plus the four image files in `app/`), wording (`lib/i18n.ts`) and colours (`app/globals.css`). To replace the logo,
-copy each `<path d="…">` from your SVG into `lib/logoPaths.ts` (viewBox `0 0 217 141`) and replace `app/icon.svg`,
-`app/icon.png` (512×512), `app/apple-icon.png` (180×180) and `app/opengraph-image.png` (1200×630).
+Still in code (rarely changes): links in the Resources panel (`lib/resources.ts`), wording (`lib/i18n.ts`), the
+fallback logo shown before one is uploaded (`lib/logoPaths.ts`) and the share-preview image (`app/opengraph-image.png`).
+Brand presets, tones and fonts live in `lib/brand.ts` if you want to add your own.
 
 **Running a public demo?** Set `DEMO_MODE=1`: the admin password is shown on the sign-in screen so visitors can try
 everything, and General gets a "Reset demo" button.
