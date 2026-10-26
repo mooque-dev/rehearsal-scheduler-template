@@ -11,6 +11,13 @@ It is a plain Next.js app with a Postgres database — no accounts, no ORM, a ha
 > **This repository is a template.** It contains a fictional company ("My Production") so you
 > can see it working. Nothing in it belongs to a real group.
 
+## Try the live demo
+
+**https://rehearsal-scheduler-demo.vercel.app** — the schedule as a member sees it.
+**[/admin](https://rehearsal-scheduler-demo.vercel.app/admin)** — password `demo-admin` — add members and teams,
+build the calendar, change the branding. Anyone can edit the demo; it resets to the sample company every day
+(and from Admin → General → Reset demo).
+
 ## Quick start (about 15 minutes)
 
 You need Node 22.18+, a free [Neon](https://neon.com) (or any Postgres) database, and a free
@@ -56,7 +63,8 @@ fallback logo shown before one is uploaded (`lib/logoPaths.ts`) and the share-pr
 Brand presets, tones and fonts live in `lib/brand.ts` if you want to add your own.
 
 **Running a public demo?** Set `DEMO_MODE=1`: the admin password is shown on the sign-in screen so visitors can try
-everything, and General gets a "Reset demo" button.
+everything, General gets a "Reset demo" button, and — with a `CRON_SECRET` set on Vercel — the daily job in
+`vercel.json` puts the sample company back every morning. Without `DEMO_MODE`, that job does nothing.
 
 ## How attendance works
 
@@ -88,4 +96,4 @@ readable at `/archive` behind `ARCHIVE_PIN`.
 
 - Built on Next.js 16 (App Router), React 19, Tailwind v4, TypeScript and `pg`.
 - `AGENTS.md` / `CLAUDE.md` are hints for AI coding assistants; keep or delete them.
-- No license is included. Add one (for example MIT) before you share the code more widely.
+- MIT licensed (see `LICENSE`).
