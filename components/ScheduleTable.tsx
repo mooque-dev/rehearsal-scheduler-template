@@ -172,7 +172,9 @@ export default function ScheduleTable({
       className="no-focus-ring overflow-x-auto overscroll-x-contain border-y sm:border border-zinc-800 sm:rounded-xl -mx-3 sm:mx-0 bg-zinc-950"
     >
       <table
-        className="border-separate border-spacing-0 min-w-max"
+        className="border-separate border-spacing-0"
+        // explicit width only: a "min-width: max-content" here made Firefox size the
+        // fixed-layout table ~18 million px wide, pushing every date column off-screen
         style={{ tableLayout: "fixed", width: `calc(${nameColWidth} + ${dates.length} * ${dateColWidth})` }}
       >
         <colgroup>
