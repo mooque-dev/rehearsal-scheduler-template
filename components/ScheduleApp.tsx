@@ -133,15 +133,22 @@ export default function ScheduleApp() {
     setStatusMap(m);
   };
 
+  // Only the newest request may paint: on first load the default team and the
+  // remembered one are both fetched, and a slower stale reply used to overwrite
+  // the right one (an empty or wrong team on screen).
+  const latestFetch = useRef(0);
   const fetchSchedule = useCallback(async () => {
+    const id = ++latestFetch.current;
     setLoadError(false);
     try {
       const res = await fetch(`/api/schedule?department=${department}`);
       const data = await res.json();
+      if (id !== latestFetch.current) return;
       if (!res.ok || !data.people) throw new Error(data.error ?? "load_failed");
       applyResponse(data);
       setLoading(false);
     } catch {
+      if (id !== latestFetch.current) return;
       setLoadError(true);
       setLoading(false);
     }
