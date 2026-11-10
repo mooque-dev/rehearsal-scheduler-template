@@ -3,7 +3,7 @@
 
 export const SITE = {
   // Default name, and the title of the browser tab and share preview.
-  title: { en: "My Production 2026", ko: "My Production 2026" },
+  title: { en: "My Production", ko: "My Production" },
   description: "Rehearsal schedule & attendance",
   // Short name shown when the app is added to a phone's home screen.
   shortName: "Scheduler",

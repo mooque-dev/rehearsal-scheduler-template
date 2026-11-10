@@ -29,8 +29,8 @@ export async function seedSample(q: Q, season = 1): Promise<{ people: number; da
   await q("DELETE FROM venues WHERE id NOT IN (SELECT venue_id FROM sessions WHERE venue_id IS NOT NULL)");
 
   const settings: [string, string][] = [
-    ["site_title_en", "My Production 2026"],
-    ["site_title_ko", "My Production 2026"],
+    ["site_title_en", "My Production"],
+    ["site_title_ko", "My Production"],
     ["default_status", "unset"],
     [
       "links",
