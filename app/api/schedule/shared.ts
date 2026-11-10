@@ -1,6 +1,7 @@
 import { query, ensureSchema } from "@/lib/db";
-import type { SeasonBreak, SeasonDate, SiteSettings, Team } from "@/lib/season";
-import { getBreaks, getDefaultStatus, getSeasonDates, getSiteSettings, getTeams } from "@/lib/data";
+import { isDemo } from "@/lib/adminAuth";
+import type { ResourceLink, SeasonBreak, SeasonDate, SiteSettings, Team } from "@/lib/season";
+import { getBreaks, getDefaultStatus, getLinks, getSeasonDates, getSiteSettings, getTeams } from "@/lib/data";
 import type { Person, Absence, Notice, UpdateLogEntry, LogChange } from "@/lib/types";
 
 export interface ScheduleResponse {
@@ -11,6 +12,9 @@ export interface ScheduleResponse {
   breaks: SeasonBreak[];
   teams: Team[];
   site: SiteSettings;
+  links: ResourceLink[];
+  /** a public demo: the page shows a banner pointing at the admin and the template */
+  demo: boolean;
   responses: { person_id: number; date: string; status: string }[];
   logs: UpdateLogEntry[];
   notices: Notice[];
@@ -94,12 +98,13 @@ export async function loadSchedule(department: string, season: number): Promise<
     ),
     query<Notice>("SELECT * FROM notices WHERE season = $1 ORDER BY notice_date DESC", [season]),
   ]);
-  const [dates, breaks, teams, site, defaultStatus] = await Promise.all([
+  const [dates, breaks, teams, site, defaultStatus, links] = await Promise.all([
     getSeasonDates(season),
     getBreaks(season),
     getTeams(season),
     getSiteSettings(),
     getDefaultStatus(),
+    getLinks(),
   ]);
   const firstShow = dates.find((d) => d.isPerformance);
   return {
@@ -110,6 +115,8 @@ export async function loadSchedule(department: string, season: number): Promise<
     breaks,
     teams,
     site,
+    links,
+    demo: isDemo(),
     responses,
     logs: await withDetails(logs),
     notices,

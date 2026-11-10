@@ -96,9 +96,17 @@ export default function BrandingSection({
   const failing = [...derived.dark.checks, ...derived.light.checks].filter((c) => c.ratio < c.target);
   const shown = derived[checkMode];
 
+  // public demo: uploads are not published, the logo is only previewed here
+  const [localLogo, setLocalLogo] = useState<string | null>(null);
+
   async function upload(file: File) {
     try {
       const dataUrl = await toPng(file);
+      if (state.demo) {
+        setLocalLogo(dataUrl);
+        onToast(tx("데모에서는 로고가 이 기기에서만 보여요", "In the demo your logo is shown on this device only"));
+        return;
+      }
       if (await act("brand.logo", { dataUrl }, tx("로고를 올렸어요", "Logo uploaded"))) router.refresh();
     } catch {
       onToast(tx("이 이미지는 쓸 수 없어요. PNG, JPG 또는 SVG를 올려 주세요.", "That image can't be used. Try a PNG, JPG or SVG."), "error");
@@ -159,12 +167,22 @@ export default function BrandingSection({
         <FieldLabel>{tx("로고", "Logo")}</FieldLabel>
         <div className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
           <div className="w-16 h-16 shrink-0 grid place-items-center rounded-xl bg-zinc-800">
-            <Logo className="w-12" />
+            {localLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={localLogo} alt="" className="w-12 h-auto object-contain" />
+            ) : (
+              <Logo className="w-12" />
+            )}
           </div>
           <div className="flex-1 min-w-0 space-y-2">
             <p className="text-xs text-zinc-400 leading-relaxed">
               {tx("PNG, JPG 또는 SVG. 정사각형이 가장 좋아요. 앱 아이콘으로도 쓰여요.", "PNG, JPG or SVG; square works best. Also used as the app icon.")}
             </p>
+            {state.demo && (
+              <p className="text-xs text-amber-300 leading-relaxed">
+                {tx("공개 데모에서는 올린 이미지가 저장되지 않고 이 화면에서만 미리 보여요.", "In the public demo, uploads aren't saved: you see a preview on this screen only.")}
+              </p>
+            )}
             <div className="flex gap-2">
               <Button onClick={() => fileRef.current?.click()} disabled={busy}>
                 {saved.logoVersion ? tx("바꾸기", "Replace") : tx("올리기", "Upload")}
@@ -367,7 +385,12 @@ export default function BrandingSection({
         <FieldLabel>{tx("미리보기", "Preview")}</FieldLabel>
         <div style={previewStyle} className="rounded-2xl border border-zinc-800 bg-zinc-950 text-zinc-100 p-4 space-y-3">
           <div className={`flex gap-2.5 ${draft.header === "centered" ? "flex-col items-center text-center" : "items-center"}`}>
-            <Logo className={draft.header === "centered" ? "w-14" : "w-10"} />
+            {localLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={localLogo} alt="" className={`${draft.header === "centered" ? "w-14" : "w-10"} h-auto object-contain`} />
+            ) : (
+              <Logo className={draft.header === "centered" ? "w-14" : "w-10"} />
+            )}
             <div>
               <p className="text-lg font-bold leading-tight" style={{ fontFamily: FONTS[draft.headingFont].stack }}>
                 {state.site.title[lang]}

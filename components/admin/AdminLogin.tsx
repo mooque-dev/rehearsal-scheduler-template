@@ -13,6 +13,7 @@ export default function AdminLogin({ enabled, demoHint }: { enabled: boolean; de
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [locked, setLocked] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,6 +26,7 @@ export default function AdminLogin({ enabled, demoHint }: { enabled: boolean; de
         body: JSON.stringify({ password }),
       });
       if (res.ok) return window.location.reload();
+      setLocked(res.status === 429);
     } catch {
       // treated like a wrong password: try again
     }
@@ -71,7 +73,7 @@ export default function AdminLogin({ enabled, demoHint }: { enabled: boolean; de
             />
             <p role="alert" className={`text-sm text-red-400 mt-2 flex items-center gap-1.5 ${error ? "" : "invisible"}`}>
               <Icon name="alert" className="w-4 h-4" />
-              {tx("비밀번호가 맞지 않아요.", "That password isn't right.")}
+              {locked ? tx("시도가 너무 많아요. 10분 뒤에 다시 해 주세요.", "Too many attempts. Try again in 10 minutes.") : tx("비밀번호가 맞지 않아요.", "That password isn't right.")}
             </p>
             <Button type="submit" variant="primary" className="w-full mt-3" disabled={!password || loading}>
               {loading ? tx("확인 중…", "Checking…") : tx("들어가기", "Sign in")}

@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "crypto";
+import { createHash, createHmac, timingSafeEqual } from "crypto";
 
 export const ARCHIVE_COOKIE = "sched_archive_auth";
 export const ARCHIVE_COOKIE_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
@@ -6,16 +6,18 @@ export const ARCHIVE_COOKIE_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
 function expectedToken(): string | null {
   const pin = process.env.ARCHIVE_PIN;
   if (!pin) return null;
-  return createHash("sha256").update(pin).digest("hex");
+  // a keyed MAC, not a bare hash of the passphrase: the cookie can't be used to
+  // test guesses offline without also knowing the passphrase-derived key
+  return createHmac("sha256", pin).update("archive-session-v1").digest("hex");
 }
 
 export function verifyPin(pin: string): string | null {
   const expected = expectedToken();
   if (!expected) return null;
-  const given = createHash("sha256").update(pin).digest("hex");
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  const real = process.env.ARCHIVE_PIN ?? "";
+  const a = createHash("sha256").update(pin).digest();
+  const b = createHash("sha256").update(real).digest();
+  if (!timingSafeEqual(a, b)) return null;
   return expected;
 }
 

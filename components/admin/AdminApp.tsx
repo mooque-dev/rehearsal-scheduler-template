@@ -29,6 +29,7 @@ type Editor =
   | { kind: "break"; row: Partial<BreakRow> }
   | { kind: "venue"; row: Partial<Venue> }
   | { kind: "notice"; row: Partial<NoticeRow> }
+  | { kind: "link"; row: Partial<AdminState["links"][number]> }
   | null;
 
 const ROLES = ["Main/Sub", "Ensemble", "Coach"] as const;
@@ -73,6 +74,8 @@ export default function AdminApp() {
     team_not_empty: tx("멤버가 있는 팀은 삭제할 수 없어요. 먼저 멤버를 옮기거나 삭제하세요.", "Move or remove this team's members first."),
     end_before_start: tx("끝 날짜가 시작 날짜보다 빨라요.", "The end date is before the start date."),
     unknown_team: tx("팀을 선택해 주세요.", "Please pick a team."),
+    invalid_url: tx("주소는 https:// 로 시작해야 해요.", "The address must start with https://"),
+    not_empty: tx("이미 내용이 있어서 예시를 불러올 수 없어요.", "There is already content here, so the sample can't be loaded."),
     invalid_image: tx("이미지를 올리지 못했어요. 더 작은 PNG, JPG 또는 SVG로 해 주세요.", "Couldn't use that image. Try a smaller PNG, JPG or SVG."),
   };
 
@@ -137,7 +140,7 @@ export default function AdminApp() {
     { key: "members", label: tx("멤버", "Members") },
     { key: "teams", label: tx("팀", "Teams") },
     { key: "schedule", label: tx("일정", "Schedule") },
-    { key: "notices", label: tx("공지", "Notices") },
+    { key: "notices", label: tx("공지·링크", "Notices & links") },
     { key: "branding", label: tx("브랜딩", "Branding") },
     { key: "general", label: tx("기본 설정", "General") },
   ];
@@ -332,6 +335,24 @@ export default function AdminApp() {
           <Row key={n.id} title={n.title} sub={[fmt(n.notice_date), n.time_info].filter(Boolean).join(" · ")} onClick={() => setEditor({ kind: "notice", row: n })} />
         ))}
       </ul>
+
+      <div className="pt-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">{tx("자료 링크", "Resource links")}</h3>
+          <button type="button" onClick={() => setEditor({ kind: "link", row: {} })} className="min-h-10 px-3 text-sm font-medium text-blue-400 hover:text-blue-300">
+            + {tx("추가", "Add")}
+          </button>
+        </div>
+        <p className="text-xs text-zinc-400 mb-2 leading-relaxed">
+          {tx("공유 폴더, SNS 등 자주 여는 링크예요. 일정표의 ‘자료’ 버튼에 보여요.", "Shared folders, social pages and other links people open often. Shown under the Resources button on the schedule.")}
+        </p>
+        <ul className="rounded-xl border border-zinc-800 bg-zinc-900/60">
+          {state.links.length === 0 && <li className="px-4 py-4 text-sm text-zinc-400">{tx("없음 (버튼이 숨겨져요)", "None (the button is hidden)")}</li>}
+          {state.links.map((k) => (
+            <Row key={k.id} title={k.label} sub={k.url} onClick={() => setEditor({ kind: "link", row: k })} />
+          ))}
+        </ul>
+      </div>
     </section>
   );
 
@@ -380,6 +401,32 @@ export default function AdminApp() {
               "This is a demo. Changes are visible to everyone with the link. You can reset it any time under General."
             )}
           </p>
+        )}
+
+        {state.teams.length === 0 && state.people.length === 0 && state.sessions.length === 0 && (
+          <div className="mb-4 rounded-xl border border-blue-500/30 bg-blue-950/40 p-4 space-y-3">
+            <p className="text-base font-semibold text-zinc-100">{tx("환영해요! 어떻게 시작할까요?", "Welcome! How would you like to start?")}</p>
+            <p className="text-sm text-zinc-300 leading-relaxed">
+              {tx(
+                "예시 극단(팀 3개, 멤버 18명, 한 시즌 일정)을 불러와 둘러본 뒤 내 것으로 바꾸거나, 빈 상태에서 팀부터 만들 수 있어요.",
+                "Load a sample company (3 teams, 18 members, a season of dates) to look around and then make it yours, or start empty by creating a team."
+              )}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" disabled={busy} onClick={() => act("sample.load", {}, tx("예시를 불러왔어요", "Sample loaded"))}>
+                {tx("예시 불러오기", "Load the sample")}
+              </Button>
+              <Button
+                disabled={busy}
+                onClick={() => {
+                  setTab("teams");
+                  setEditor({ kind: "team", row: { uses_roles: false } });
+                }}
+              >
+                {tx("빈 상태로 시작", "Start empty")}
+              </Button>
+            </div>
+          </div>
         )}
 
         <nav role="tablist" className="flex gap-1 border-b border-zinc-800 -mx-3 px-3 sm:mx-0 sm:px-0 mb-4 overflow-x-auto [scrollbar-width:none]">
@@ -479,6 +526,21 @@ export default function AdminApp() {
           onClose={close}
           onSave={(p) => saveThen("venue.save", p)}
           onDelete={(id) => saveThen("venue.delete", { id }, deletedOk)}
+        />
+      )}
+      {editor?.kind === "link" && (
+        <SimpleEditor
+          title={tx("자료 링크", "Resource link")}
+          fields={[
+            { key: "label", label: tx("이름", "Label"), placeholder: tx("예: 공유 폴더", "e.g. Shared folder") },
+            { key: "url", label: tx("주소", "Address"), placeholder: "https://…" },
+          ]}
+          row={editor.row as Record<string, unknown>}
+          tx={tx}
+          busy={busy}
+          onClose={close}
+          onSave={(p) => saveThen("link.save", p)}
+          onDelete={(id) => saveThen("link.delete", { id }, deletedOk)}
         />
       )}
       {editor?.kind === "notice" && (

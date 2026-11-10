@@ -29,5 +29,6 @@ if (n > 0 && !process.argv.includes("--reset")) {
   process.exit(0);
 }
 const result = await withTransaction((q) => seedSample(q, season));
+await query("DELETE FROM login_attempts"); // a fresh start also clears any sign-in lockout
 console.log(`Seeded season ${season}: ${result.people} people, ${result.dates} dates, ${result.notices} notices.`);
 process.exit(0);

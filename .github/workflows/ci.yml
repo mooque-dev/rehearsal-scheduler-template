@@ -16,3 +16,30 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+
+  # The schedule must load, lay out and save in Chrome, Firefox and Safari's engine.
+  browsers:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scheduler
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/scheduler
+      ADMIN_PASSWORD: test-admin
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run build
+      - run: npm run seed -- --reset
+      - run: npm test

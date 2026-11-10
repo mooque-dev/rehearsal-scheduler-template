@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "@/lib/prefs";
+import { SITE } from "@/lib/site.config";
 import { useBrand } from "@/components/BrandProvider";
 import { t, STATUS_CYCLE, STATUS_CYCLE_UNSET, teamLabel, type DepartmentKey } from "@/lib/i18n";
 import type { Person, Notice, UpdateLogEntry } from "@/lib/types";
-import type { SeasonDate, SiteSettings, Team } from "@/lib/season";
+import type { ResourceLink, SeasonDate, SiteSettings, Team } from "@/lib/season";
 import OnboardingModal from "@/components/OnboardingModal";
 import SettingsModal from "@/components/SettingsModal";
 import NoticesModal from "@/components/NoticesModal";
@@ -50,6 +51,8 @@ export default function ScheduleApp() {
   const l = (k: Parameters<typeof t>[1]) => t(lang, k);
   const [teams, setTeams] = useState<Team[]>([]);
   const [site, setSite] = useState<SiteSettings | null>(null);
+  const [demo, setDemo] = useState(false);
+  const [links, setLinks] = useState<ResourceLink[]>([]);
   const deptLabel = (d: DepartmentKey) => teamLabel(teams, d, lang);
   const { toast, show: showToast } = useToast();
 
@@ -115,6 +118,8 @@ export default function ScheduleApp() {
     breaks?: { from: string; to: string }[];
     teams?: Team[];
     site?: SiteSettings;
+    demo?: boolean;
+    links?: ResourceLink[];
     responses: { person_id: number; date: string; status: string }[];
     logs: UpdateLogEntry[];
     notices: Notice[];
@@ -124,6 +129,8 @@ export default function ScheduleApp() {
     setShowStart(data.showStart ?? null);
     setTeams(data.teams ?? []);
     setSite(data.site ?? null);
+    setDemo(!!data.demo);
+    setLinks(data.links ?? []);
     setDefaultStatus(data.defaultStatus ?? "yes");
     setBreaks(data.breaks ?? []);
     setLogs(data.logs);
@@ -314,6 +321,19 @@ export default function ScheduleApp() {
   return (
     <div className="min-h-dvh bg-zinc-950 text-zinc-100 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:pb-0">
       <div className="max-w-[1400px] mx-auto px-3 sm:px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6 pb-6">
+        {demo && (
+          <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3.5 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-amber-200">
+            <span className="flex-1 min-w-[12rem] leading-snug">
+              {ko ? "데모예요. 예시 데이터이고 매일 초기화돼요. 마음껏 눌러 보세요." : "This is a demo with sample data. It resets every day, so tap anything."}
+            </span>
+            <Link href="/admin" className="font-semibold underline underline-offset-2 min-h-8 inline-flex items-center">
+              {ko ? "관리 페이지 보기" : "Try the admin"}
+            </Link>
+            <a href={SITE.templateUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2 min-h-8 inline-flex items-center">
+              {ko ? "내 팀용으로 만들기" : "Get your own"}
+            </a>
+          </div>
+        )}
         <header className="mb-4 sm:mb-5">
           {centered ? (
             <>
@@ -322,9 +342,11 @@ export default function ScheduleApp() {
                 <IconButton label={l("notices")} icon="bell" onClick={openNotices} badge={upcomingUnseenCount} />
               )}
               <IconButton label={l("calendar")} icon="calendar" onClick={() => setCalendarOpen(true)} />
-              <IconButton label={l("resources")} icon="link" onClick={() => setResourcesOpen(true)}>
-                <span className="hidden sm:inline text-xs font-medium">{l("resources")}</span>
-              </IconButton>
+              {links.length > 0 && (
+                <IconButton label={l("resources")} icon="link" onClick={() => setResourcesOpen(true)}>
+                  <span className="hidden sm:inline text-xs font-medium">{l("resources")}</span>
+                </IconButton>
+              )}
               <IconButton label={l("settings")} icon="gear" onClick={() => setSettingsOpen(true)} />
               <div className="hidden sm:flex items-center gap-2 ml-1">
                 {hasUnsaved && <DiscardButton label={discardLabel} onClick={resetEdits} />}
@@ -351,9 +373,11 @@ export default function ScheduleApp() {
                 <IconButton label={l("notices")} icon="bell" onClick={openNotices} badge={upcomingUnseenCount} />
               )}
               <IconButton label={l("calendar")} icon="calendar" onClick={() => setCalendarOpen(true)} />
-              <IconButton label={l("resources")} icon="link" onClick={() => setResourcesOpen(true)}>
-                <span className="hidden sm:inline text-xs font-medium">{l("resources")}</span>
-              </IconButton>
+              {links.length > 0 && (
+                <IconButton label={l("resources")} icon="link" onClick={() => setResourcesOpen(true)}>
+                  <span className="hidden sm:inline text-xs font-medium">{l("resources")}</span>
+                </IconButton>
+              )}
               <IconButton label={l("settings")} icon="gear" onClick={() => setSettingsOpen(true)} />
               <div className="hidden sm:flex items-center gap-2 ml-1">
                 {hasUnsaved && <DiscardButton label={discardLabel} onClick={resetEdits} />}
@@ -488,7 +512,7 @@ export default function ScheduleApp() {
         lang={lang}
       />
       <CalendarModal dates={dates} breaks={breaks} notices={notices} lang={lang} open={calendarOpen} onClose={() => setCalendarOpen(false)} />
-      <ResourcesModal open={resourcesOpen} onClose={() => setResourcesOpen(false)} lang={lang} />
+      <ResourcesModal open={resourcesOpen} onClose={() => setResourcesOpen(false)} lang={lang} links={links} />
       <Sheet
         open={pendingDept !== null}
         onClose={() => setPendingDept(null)}

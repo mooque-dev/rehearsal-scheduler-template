@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query, ensureSchema, getCurrentSeason, DbNotConfiguredError } from "@/lib/db";
+import { query, ensureSchema, getCurrentSeason, withTransaction, DbNotConfiguredError } from "@/lib/db";
 import { loadSchedule } from "./shared";
 import { getDefaultStatus } from "@/lib/data";
 
@@ -108,63 +108,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "invalid_request" }, { status: 400 });
     }
 
-    const prevStatuses: StatusChange[] = [];
-    for (const c of statusChanges) {
-      const existing = await query<{ status: string }>(
-        "SELECT status FROM absences WHERE person_id = $1 AND date = $2",
-        [c.person_id, c.date]
-      );
-      prevStatuses.push({
-        person_id: c.person_id,
-        date: c.date,
-        status: (existing[0]?.status as StatusChange["status"]) ?? defaultStatus,
-      });
-      // a cell with no row means the season's default; only differing answers are stored
-      if (c.status === defaultStatus || c.status === "unset") {
-        await query("DELETE FROM absences WHERE person_id = $1 AND date = $2", [
-          c.person_id,
-          c.date,
-        ]);
-      } else if (existing[0]) {
-        await query("UPDATE absences SET status = $1 WHERE person_id = $2 AND date = $3", [
-          c.status,
-          c.person_id,
-          c.date,
-        ]);
-      } else {
-        await query(
-          "INSERT INTO absences (person_id, date, status) VALUES ($1, $2, $3)",
-          [c.person_id, c.date, c.status]
+    // everything a save writes happens in one transaction: attendance, roles and
+    // the log entry land together or not at all
+    await withTransaction(async (q) => {
+      const prevStatuses: StatusChange[] = [];
+      for (const c of statusChanges) {
+        const existing = await q<{ status: string }>(
+          "SELECT status FROM absences WHERE person_id = $1 AND date = $2 FOR UPDATE",
+          [c.person_id, c.date]
         );
+        prevStatuses.push({
+          person_id: c.person_id,
+          date: c.date,
+          status: (existing[0]?.status as StatusChange["status"]) ?? defaultStatus,
+        });
+        // a cell with no row means the season's default; only differing answers are stored
+        if (c.status === defaultStatus || c.status === "unset") {
+          await q("DELETE FROM absences WHERE person_id = $1 AND date = $2", [c.person_id, c.date]);
+        } else if (existing[0]) {
+          await q("UPDATE absences SET status = $1 WHERE person_id = $2 AND date = $3", [c.status, c.person_id, c.date]);
+        } else {
+          await q("INSERT INTO absences (person_id, date, status) VALUES ($1, $2, $3)", [c.person_id, c.date, c.status]);
+        }
       }
-    }
 
-    const prevRoles: RoleChange[] = [];
-    for (const rc of roleChanges) {
-      const existing = await query<{ role: string | null }>(
-        "SELECT role FROM people WHERE id = $1",
-        [rc.personId]
-      );
-      prevRoles.push({ personId: rc.personId, role: existing[0]?.role ?? null });
-      await query("UPDATE people SET role = $1 WHERE id = $2", [rc.role, rc.personId]);
-    }
+      const prevRoles: RoleChange[] = [];
+      for (const rc of roleChanges) {
+        const existing = await q<{ role: string | null }>("SELECT role FROM people WHERE id = $1", [rc.personId]);
+        prevRoles.push({ personId: rc.personId, role: existing[0]?.role ?? null });
+        await q("UPDATE people SET role = $1 WHERE id = $2", [rc.role, rc.personId]);
+      }
 
-    const counts: Record<string, number> = {};
-    for (const c of statusChanges) counts[c.status] = (counts[c.status] ?? 0) + 1;
-    const parts: string[] = [];
-    for (const key of ["no", "maybe", "yes", "unset"] as const) {
-      if (counts[key]) parts.push(`marked ${STATUS_LABEL[key]} on ${counts[key]} date(s)`);
-    }
-    if (roleChanges.length > 0) {
-      parts.push(`updated role for ${roleChanges.length} ${roleChanges.length === 1 ? "person" : "people"}`);
-    }
-    let summary = parts.join(", ");
-    if (reason?.trim()) summary += ` — reason: ${reason.trim()}`;
+      const counts: Record<string, number> = {};
+      for (const c of statusChanges) counts[c.status] = (counts[c.status] ?? 0) + 1;
+      const parts: string[] = [];
+      for (const key of ["no", "maybe", "yes", "unset"] as const) {
+        if (counts[key]) parts.push(`marked ${STATUS_LABEL[key]} on ${counts[key]} date(s)`);
+      }
+      if (roleChanges.length > 0) {
+        parts.push(`updated role for ${roleChanges.length} ${roleChanges.length === 1 ? "person" : "people"}`);
+      }
+      let summary = parts.join(", ");
+      if (reason?.trim()) summary += ` — reason: ${reason.trim()}`;
 
-    await query(
-      "INSERT INTO update_log (saved_by, summary, changes_json, season) VALUES ($1, $2, $3, $4)",
-      [savedBy.trim(), summary, JSON.stringify({ defaultStatus, prevStatuses, prevRoles, changes: statusChanges, reason: reason?.trim() || null }), season]
-    );
+      await q("INSERT INTO update_log (saved_by, summary, changes_json, season) VALUES ($1, $2, $3, $4)", [
+        savedBy.trim(),
+        summary,
+        JSON.stringify({ defaultStatus, prevStatuses, prevRoles, changes: statusChanges, reason: reason?.trim() || null }),
+        season,
+      ]);
+    });
 
     const data = await loadSchedule(department!, season);
     return NextResponse.json(data);

@@ -113,6 +113,12 @@ export async function ensureSchema(): Promise<void> {
           data BYTEA NOT NULL,
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
+        -- Failed password attempts, for throttling (see lib/throttle.ts).
+        CREATE TABLE IF NOT EXISTS login_attempts (
+          key TEXT NOT NULL,
+          at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+        CREATE INDEX IF NOT EXISTS login_attempts_key_at ON login_attempts (key, at);
         CREATE TABLE IF NOT EXISTS breaks (
           id SERIAL PRIMARY KEY,
           season INTEGER NOT NULL DEFAULT 1,

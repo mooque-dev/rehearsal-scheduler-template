@@ -32,6 +32,13 @@ export async function seedSample(q: Q, season = 1): Promise<{ people: number; da
     ["site_title_en", "My Production 2026"],
     ["site_title_ko", "My Production 2026"],
     ["default_status", "unset"],
+    [
+      "links",
+      JSON.stringify([
+        { id: 1, label: "Shared folder (scripts, scores)", url: "https://example.com/shared-folder" },
+        { id: 2, label: "Our social page", url: "https://example.com/our-page" },
+      ]),
+    ],
   ];
   for (const [k, v] of settings) {
     await q("INSERT INTO _meta (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [k, v]);
@@ -50,22 +57,37 @@ export async function seedSample(q: Q, season = 1): Promise<{ people: number; da
   const [studio] = await q<{ id: number }>("INSERT INTO venues (name, address) VALUES ('Studio A', '123 Example St, Springfield') RETURNING id");
   const [hall] = await q<{ id: number }>("INSERT INTO venues (name, address) VALUES ('Main Hall', '456 Sample Ave, Springfield') RETURNING id");
 
-  const breakFrom = "2026-12-27";
-  const breakTo = "2027-01-03";
-  await q("INSERT INTO breaks (season, from_date, to_date, label) VALUES ($1,$2,$3,$4)", [season, breakFrom, breakTo, "Holiday break"]);
+  // The sample season is dated relative to today, so it never looks stale: weekly
+  // Sunday rehearsals from two weeks ago for about four months, one week off, a
+  // special weekday session, and a show weekend at the end.
+  const day = (base: Date, plus: number) => {
+    const d = new Date(base);
+    d.setDate(d.getDate() + plus);
+    return iso(d);
+  };
+  const start = new Date();
+  start.setHours(12, 0, 0, 0);
+  start.setDate(start.getDate() - start.getDay() - 14); // the Sunday two weeks back
+  const WEEKS = 18;
+  const BREAK_WEEK = 9;
+  const breakFrom = day(start, BREAK_WEEK * 7);
+  const breakTo = day(start, BREAK_WEEK * 7 + 6);
+  await q("INSERT INTO breaks (season, from_date, to_date, label) VALUES ($1,$2,$3,$4)", [season, breakFrom, breakTo, "Break"]);
 
-  // Weekly Sunday rehearsals, skipping the break.
-  const regular = sundays("2026-11-01", "2027-02-28").filter((d) => d < breakFrom || d > breakTo);
+  const regular = sundays(day(start, 0), day(start, (WEEKS - 1) * 7)).filter((d) => d < breakFrom || d > breakTo);
   for (const date of regular) {
     await q("INSERT INTO sessions (season, date, title, time, venue_id) VALUES ($1,$2,'Rehearsal','4–7 PM',$3)", [season, date, studio.id]);
   }
-  await q("UPDATE sessions SET title = 'Act 1 check', all_hands = true WHERE season = $1 AND date = '2026-12-20'", [season]);
+  const checkDate = day(start, 7 * 7);
+  await q("UPDATE sessions SET title = 'Act 1 check', all_hands = true WHERE season = $1 AND date = $2", [season, checkDate]);
   // A special session on a weekday, only for the cast's leads and ensemble.
+  const specialDate = day(start, 4 * 7 + 4); // a Thursday
   await q(
-    "INSERT INTO sessions (season, date, title, time, venue_id, special, teams, roles) VALUES ($1,'2026-11-19','Guest coach visit','6–9 PM',$2,true,$3,$4)",
-    [season, hall.id, JSON.stringify(["cast"]), JSON.stringify(["Main/Sub", "Ensemble"])]
+    "INSERT INTO sessions (season, date, title, time, venue_id, special, teams, roles) VALUES ($1,$2,'Guest coach visit','6–9 PM',$3,true,$4,$5)",
+    [season, specialDate, hall.id, JSON.stringify(["cast"]), JSON.stringify(["Main/Sub", "Ensemble"])]
   );
-  for (const date of ["2027-03-12", "2027-03-13", "2027-03-14"]) {
+  const showDates = [5, 6, 7].map((n) => day(start, (WEEKS - 1) * 7 + n)); // Fri–Sun after the last rehearsal
+  for (const date of showDates) {
     await q("INSERT INTO sessions (season, date, title, venue_id, is_performance, all_hands) VALUES ($1,$2,'Performance',$3,true,true)", [season, date, hall.id]);
   }
 
@@ -99,9 +121,10 @@ export async function seedSample(q: Q, season = 1): Promise<{ people: number; da
 
   const maps = (addr: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
   const notices: [string, string, string, string | null][] = [
-    ["First rehearsal & welcome", `4–7 PM · Studio A · [Map](${maps("123 Example St, Springfield")})\nIntroductions, the season plan and signing the company agreement.`, "2026-11-01", "4–7 PM"],
-    ["Guest coach visit", "A visiting coach is joining the cast. Please mark your attendance.", "2026-11-19", "6–9 PM"],
-    ["No rehearsal over the holidays", "We take a break from Dec 27 to Jan 3 and return on Jan 10.", "2026-12-27", null],
+    ["Welcome to the season", `4–7 PM · Studio A · [Map](${maps("123 Example St, Springfield")})\nIntroductions, the season plan and signing the company agreement.`, day(start, 0), "4–7 PM"],
+    ["Guest coach visit", "A visiting coach is joining the cast. Please mark your attendance.", specialDate, "6–9 PM"],
+    ["Act 1 check — everyone attends", "We run Act 1 start to finish. All teams, please be there.", checkDate, "4–7 PM"],
+    ["No rehearsal this week", "We take a week off and return the following Sunday.", breakFrom, null],
   ];
   for (const [title, content, date, time] of notices) {
     await q("INSERT INTO notices (title, content, notice_date, time_info, pinned, season) VALUES ($1,$2,$3,$4,true,$5)", [title, content, date, time, season]);

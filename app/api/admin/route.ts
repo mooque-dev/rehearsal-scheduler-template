@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, ensureSchema, getCurrentSeason, withTransaction, DbNotConfiguredError, type Q } from "@/lib/db";
 import { verifyAdminToken, isDemo, ADMIN_COOKIE } from "@/lib/adminAuth";
-import { getSiteSettings, getDefaultStatus, getBrand, setMeta } from "@/lib/data";
+import { getSiteSettings, getDefaultStatus, getBrand, getLinks, setMeta } from "@/lib/data";
 import { normalizeBrand } from "@/lib/brand";
 import { weeklyDates, inBreak } from "@/lib/season";
 import { seedSample } from "@/lib/seed";
@@ -58,6 +58,7 @@ function slug(name: string): string {
 }
 
 async function loadState(season: number): Promise<AdminState> {
+  const links = await getLinks();
   const [site, defaultStatus, brand, teams, venues, sessions, breaks, people, notices] = await Promise.all([
     getSiteSettings(),
     getDefaultStatus(),
@@ -93,6 +94,7 @@ async function loadState(season: number): Promise<AdminState> {
     site,
     defaultStatus,
     brand,
+    links,
     teams,
     venues,
     sessions: sessions.map((s) => ({ ...s, teams: parse(s.teams as string | null), roles: parse(s.roles as string | null) })),
@@ -343,6 +345,26 @@ export async function POST(req: NextRequest) {
           break;
         }
 
+        case "link.save": {
+          const label = text(b.label, 60, true)!;
+          const url = text(b.url, 500, true)!;
+          if (!/^(https?:\/\/|mailto:)\S+$/i.test(url)) throw new BadRequest("invalid_url");
+          const list = await getLinks();
+          if (b.id) {
+            const item = list.find((x) => x.id === id(b.id));
+            if (item) Object.assign(item, { label, url });
+          } else {
+            if (list.length >= 12) throw new BadRequest("too_many");
+            list.push({ id: list.reduce((m, x) => Math.max(m, x.id), 0) + 1, label, url });
+          }
+          await setMeta("links", JSON.stringify(list));
+          break;
+        }
+        case "link.delete": {
+          await setMeta("links", JSON.stringify((await getLinks()).filter((x) => x.id !== id(b.id))));
+          break;
+        }
+
         case "brand.save": {
           const current = await getBrand();
           // the logo is managed by its own actions; keep whatever is stored
@@ -350,6 +372,8 @@ export async function POST(req: NextRequest) {
           break;
         }
         case "brand.logo": {
+          // a public demo must not host images strangers upload; the page previews them locally instead
+          if (isDemo()) throw new BadRequest("demo_no_upload");
           const m = typeof b.dataUrl === "string" ? b.dataUrl.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/) : null;
           if (!m) throw new BadRequest("invalid_image");
           const bytes = Buffer.from(m[1], "base64");
@@ -365,6 +389,17 @@ export async function POST(req: NextRequest) {
         case "brand.logoRemove": {
           await q("DELETE FROM assets WHERE key = 'logo'");
           await setMeta("brand", JSON.stringify({ ...(await getBrand()), logoVersion: null }));
+          break;
+        }
+
+        case "sample.load": {
+          // a first-run helper: only into a season that has nothing in it yet
+          const [{ n }] = await q<{ n: number }>(
+            "SELECT (SELECT count(*) FROM people WHERE season = $1)::int + (SELECT count(*) FROM teams WHERE season = $1)::int + (SELECT count(*) FROM sessions WHERE season = $1)::int AS n",
+            [season]
+          );
+          if (n > 0) throw new BadRequest("not_empty");
+          await seedSample(q, season);
           break;
         }
 

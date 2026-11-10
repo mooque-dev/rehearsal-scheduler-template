@@ -10,6 +10,8 @@ export const SITE = {
   // Prefix for everything the app remembers in the browser (language, theme,
   // folded groups…). Change it if you host more than one of these on one domain.
   storagePrefix: "sched",
+  // Where the public demo's banner sends people who want their own copy.
+  templateUrl: "https://github.com/mooque-dev/rehearsal-scheduler-template#readme",
 } as const;
 
 export const storageKey = (name: string) => `${SITE.storagePrefix}${name}`;

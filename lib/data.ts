@@ -2,7 +2,7 @@
 import { query, ensureSchema } from "@/lib/db";
 import { DEFAULT_BRAND, normalizeBrand, type Brand } from "@/lib/brand";
 import { SITE } from "@/lib/site.config";
-import { dateLabel, dayOfWeek, type SeasonBreak, type SeasonDate, type SiteSettings, type Team } from "@/lib/season";
+import { dateLabel, dayOfWeek, type SeasonBreak, type SeasonDate, type ResourceLink, type SiteSettings, type Team } from "@/lib/season";
 
 export async function getMeta(key: string): Promise<string | null> {
   const rows = await query<{ value: string | null }>("SELECT value FROM _meta WHERE key = $1", [key]);
@@ -112,5 +112,17 @@ export async function getSiteSettingsSafe(): Promise<SiteSettings> {
     return await getSiteSettings();
   } catch {
     return { title: { en: SITE.title.en, ko: SITE.title.ko } };
+  }
+}
+
+export async function getLinks(): Promise<ResourceLink[]> {
+  try {
+    const list = JSON.parse((await getMeta("links")) ?? "[]");
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((x) => x && typeof x.label === "string" && typeof x.url === "string" && /^(https?:\/\/|mailto:)/i.test(x.url))
+      .map((x, i) => ({ id: Number.isFinite(x.id) ? Number(x.id) : i + 1, label: x.label, url: x.url }));
+  } catch {
+    return [];
   }
 }

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query, ensureSchema, getCurrentSeason, DbNotConfiguredError } from "@/lib/db";
+import { query, ensureSchema, getCurrentSeason, withTransaction, DbNotConfiguredError } from "@/lib/db";
 import { loadSchedule } from "../shared";
 import { checkRevertPassword } from "@/lib/adminAuth";
+import { callerKey, isBlocked, recordFailure } from "@/lib/throttle";
 
 
 export async function POST(req: NextRequest) {
@@ -16,9 +17,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
 
+  const key = callerKey(req, "revert");
+  if (await isBlocked(key)) return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
   const auth = checkRevertPassword(password);
   if (auth === "disabled") return NextResponse.json({ error: "revert_disabled" }, { status: 503 });
-  if (auth === "wrong") return NextResponse.json({ error: "wrong_password" }, { status: 401 });
+  if (auth === "wrong") {
+    await recordFailure(key);
+    return NextResponse.json({ error: "wrong_password" }, { status: 401 });
+  }
 
   try {
     await ensureSchema();
@@ -43,39 +49,28 @@ export async function POST(req: NextRequest) {
       prevRoles?: { personId: number; role: string | null }[];
     } = JSON.parse(log.changes_json);
 
-    for (const s of changes.prevStatuses ?? []) {
-      // entries from before "not selected" existed treat a missing row as attending
+    // restore every cell and role, mark the entry and write the new one, all or nothing
+    await withTransaction(async (q) => {
       const entryDefault = changes.defaultStatus ?? "yes";
-      if (s.status === entryDefault || s.status === "unset") {
-        await query("DELETE FROM absences WHERE person_id = $1 AND date = $2", [
-          s.person_id,
-          s.date,
-        ]);
-      } else {
-        const existing = await query<{ id: number }>(
-          "SELECT id FROM absences WHERE person_id = $1 AND date = $2",
-          [s.person_id, s.date]
-        );
-        if (existing[0]) {
-          await query("UPDATE absences SET status = $1 WHERE id = $2", [s.status, existing[0].id]);
+      for (const s of changes.prevStatuses ?? []) {
+        if (s.status === entryDefault || s.status === "unset") {
+          await q("DELETE FROM absences WHERE person_id = $1 AND date = $2", [s.person_id, s.date]);
         } else {
-          await query("INSERT INTO absences (person_id, date, status) VALUES ($1, $2, $3)", [
-            s.person_id,
-            s.date,
-            s.status,
-          ]);
+          const existing = await q<{ id: number }>("SELECT id FROM absences WHERE person_id = $1 AND date = $2", [s.person_id, s.date]);
+          if (existing[0]) await q("UPDATE absences SET status = $1 WHERE id = $2", [s.status, existing[0].id]);
+          else await q("INSERT INTO absences (person_id, date, status) VALUES ($1, $2, $3)", [s.person_id, s.date, s.status]);
         }
       }
-    }
-    for (const r of changes.prevRoles ?? []) {
-      await query("UPDATE people SET role = $1 WHERE id = $2", [r.role, r.personId]);
-    }
-
-    await query("UPDATE update_log SET reverted = true WHERE id = $1", [logId]);
-    await query(
-      "INSERT INTO update_log (saved_by, summary, changes_json, season) VALUES ($1, $2, NULL, $3)",
-      [revertedBy.trim(), `Reverted: ${log.summary}`, season]
-    );
+      for (const r of changes.prevRoles ?? []) {
+        await q("UPDATE people SET role = $1 WHERE id = $2", [r.role, r.personId]);
+      }
+      await q("UPDATE update_log SET reverted = true WHERE id = $1", [logId]);
+      await q("INSERT INTO update_log (saved_by, summary, changes_json, season) VALUES ($1, $2, NULL, $3)", [
+        revertedBy.trim(),
+        `Reverted: ${log.summary}`,
+        season,
+      ]);
+    });
 
     const data = await loadSchedule(department!, season);
     return NextResponse.json(data);

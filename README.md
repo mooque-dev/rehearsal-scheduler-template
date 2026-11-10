@@ -1,89 +1,80 @@
 # Rehearsal Scheduler
 
-A mobile-first attendance and schedule app for a theatre company or any group that rehearses
-on a calendar: a shared table per team, ✓ / ✕ / – for every date, a reason when someone can't
-come, notices, a calendar, an update log that records who changed what (with admin-gated
-revert), and a read-only archive of earlier seasons. English and Korean out of the box,
-light and dark themes, works on a phone.
+**Who's coming to rehearsal — at a glance.** A phone-first attendance and schedule app for theatre companies,
+choirs, bands, dance crews, or any group that meets on a calendar. Members tap their dates; organisers see who's
+coming, who isn't and who hasn't answered. Free to run, yours to brand, no accounts to manage.
 
-It is a plain Next.js app with a Postgres database — no accounts, no ORM, a handful of dependencies.
+<p>
+  <img src="docs/images/schedule-phone.png" width="23%" alt="The schedule on a phone: names down the side, dates across, a tick, cross or dash in each cell">
+  <img src="docs/images/summary-phone.png" width="23%" alt="Attendance by date: how many are coming, who is out and who has not answered">
+  <img src="docs/images/admin-schedule-phone.png" width="23%" alt="The admin page listing the season's dates">
+  <img src="docs/images/admin-branding-phone.png" width="23%" alt="The branding tab: looks, logo and accent colour">
+</p>
 
-> **This repository is a template.** It contains a fictional company ("My Production") so you
-> can see it working. Nothing in it belongs to a real group.
+## Try it (no sign-up)
 
-## Try the live demo
+- **Schedule:** https://rehearsal-scheduler-demo.vercel.app — tap any cell, press Save.
+- **Admin:** https://rehearsal-scheduler-demo.vercel.app/admin — password `demo-admin`. Add people and teams,
+  build a calendar, change the look.
 
-**https://rehearsal-scheduler-demo.vercel.app** — the schedule as a member sees it.
-**[/admin](https://rehearsal-scheduler-demo.vercel.app/admin)** — password `demo-admin` — add members and teams,
-build the calendar, change the branding. Anyone can edit the demo; it resets to the sample company every day
-(and from Admin → General → Reset demo).
+The demo holds a made-up company and resets every day, so nothing you do there can break anything.
 
-## Quick start (about 15 minutes)
+## What it does
 
-You need Node 22.18+, a free [Neon](https://neon.com) (or any Postgres) database, and a free
-[Vercel](https://vercel.com) account for hosting.
+- **One tap per date.** Each cell is **–** (not answered), **✓** (coming) or **✕** (can't come, with a reason).
+- **Teams and roles.** Any number of teams as tabs; a cast can be grouped into leads, ensemble and coaches.
+- **A real calendar.** Weekly or fortnightly rehearsals in one go, one-off dates, breaks, venues with map links,
+  performances with a countdown, "everyone attends" and special sessions, dates limited to certain teams.
+- **For organisers.** Attendance by person and by date, including who still has to answer.
+- **A paper trail.** Every save is logged with who changed what; an admin can undo any entry.
+- **Your brand.** Logo, colours, fonts and layout from the admin page, with a readability check (WCAG AA) that
+  stops a colour choice from making the schedule hard to read.
+- **Notices and links.** Key dates, announcements and the links your group opens most.
+- **English and Korean**, light and dark, works in Chrome, Safari and Firefox on phones and laptops.
 
-1. **Use this template.** On GitHub press **Use this template → Create a new repository**
-   (or `gh repo create my-show --template <owner>/<this-repo> --private --clone`).
-2. **Create a database** and copy its connection string.
-3. **Configure the environment.**
-   ```bash
-   npm install
-   cp .env.example .env.local     # then fill in DATABASE_URL, ADMIN_PASSWORD, ARCHIVE_PIN
-   ```
-4. **Load the sample company** (creates the tables; adds 3 teams, 18 fictional people, a season of dates and 3 notices):
-   ```bash
-   npm run seed
-   npm run dev                    # http://localhost:3000
-   ```
-5. **Deploy.** Import the repo into Vercel, add the same environment variables, deploy. Every
-   push to `main` redeploys. Then open `/admin` on your site to set up your own company.
+## Get your own (about 10 minutes, no coding)
 
-When you are ready for real data, delete the sample people, dates and notices on /admin (or run
-`npm run seed -- --reset` and edit from there), then add your own. Skipping the seed entirely also works:
-an empty database shows a link to /admin.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template&project-name=rehearsal-scheduler&repository-name=rehearsal-scheduler&env=ADMIN_PASSWORD&envDescription=The%20password%20for%20your%20%2Fadmin%20page.%20Choose%20a%20long%20one%20and%20keep%20it%20private.&envLink=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template%2Fblob%2Fmain%2Fdocs%2FGETTING-STARTED.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%5D)
 
-## Make it yours — on /admin, no code
+1. Press the button. Vercel copies this project to your own GitHub account, creates a free database for it and asks
+   for one thing: an **admin password**.
+2. When it finishes, open `your-site.vercel.app/admin`, sign in and choose **Load the sample** or **Start empty**.
+3. Add your teams, people and dates, set your look under **Branding**, and share the link with your group.
 
-Open **/admin** (or Settings → Admin) and sign in with `ADMIN_PASSWORD`. From there you can:
+New to GitHub or Vercel? **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** walks through every step, including
+what to do if the button doesn't set up the database for you.
+
+## Good to know before you share it
+
+- **Anyone with the link can mark anyone's attendance.** That keeps it effortless for a small group; the update log
+  and undo are the safety net. Share the link only with your group. If you need more control, turn on your host's
+  password protection.
+- **Keep the admin password private.** It opens the admin page and lets someone undo log entries. Repeated wrong
+  guesses are locked out for ten minutes.
+- **It stores first names and attendance only** — no emails, no accounts. Your data lives in your own database.
+- **Cost:** the free tiers of Vercel and Neon are enough for a company-sized group.
+
+## Everything you can change on /admin
 
 | Tab | What you can change |
 | --- | --- |
-| **Members** | Add, edit, reorder and remove people; pick their team, role (leads / ensemble / coach), A/B cast, a second group, a character or position |
+| **Members** | Add, edit, reorder and remove people; team, role (leads / ensemble / coach), A/B cast, a second group, a character or position |
 | **Teams** | Add, rename (English and Korean), reorder and remove teams; "group by role" splits a team into leads, ensemble and coaches |
-| **Schedule** | Add repeating dates (every week or every 2 weeks on a chosen day, between two dates, skipping breaks), add or edit single dates (what, time, venue, performance, special session, everyone-attends ★, which teams/roles attend), breaks, venues |
-| **Notices** | Add, edit and remove notices (Markdown-style links: `[Map](https://…)`) |
-| **Branding** | Start from a look (Stage, Paper, Neon, Garden), upload a logo (also the app icon), pick any accent colour, a background tone, the theme it opens in, heading and body fonts, corners and header layout; a live preview and a readability check (WCAG AA) that adjusts colours or blocks publishing when text would be hard to read. The admin page itself stays neutral. |
-| **General** | The name shown on the schedule, and whether unanswered cells mean "–" or "✓"; on a demo, "Reset demo" |
+| **Schedule** | Repeating dates (weekly or every 2 weeks, between two dates, skipping breaks); single dates (what, time, venue, performance, special session, everyone-attends ★, which teams or roles attend); breaks; venues |
+| **Notices & links** | Notices with dates and Markdown-style links (`[Map](https://…)`); the links shown under the Resources button |
+| **Branding** | A starting look (Stage, Paper, Neon, Garden), logo (also the app icon and the picture shown when the link is shared), accent colour, background tone, opening theme, fonts, corners, header layout |
+| **General** | The name shown on the schedule; whether unanswered cells mean "–" or "✓" |
 
-Moving a date keeps the answers already given; deleting a date or a member removes their answers.
+Moving a date keeps the answers already given. Deleting a date or a member removes their answers.
 
-Still in code (rarely changes): links in the Resources panel (`lib/resources.ts`), wording (`lib/i18n.ts`), the
-fallback logo shown before one is uploaded (`lib/logoPaths.ts`) and the share-preview image (`app/opengraph-image.png`).
-Brand presets, tones and fonts live in `lib/brand.ts` if you want to add your own.
+## For developers
 
-**Running a public demo?** Set `DEMO_MODE=1`: the admin password is shown on the sign-in screen so visitors can try
-everything, General gets a "Reset demo" button, and — with a `CRON_SECRET` set on Vercel — the daily job in
-`vercel.json` puts the sample company back every morning. Without `DEMO_MODE`, that job does nothing.
-
-## How attendance works
-
-Each cell is **–** (not selected), **✓** or **✕**. Only answers are stored (`absences` table);
-a missing row means the season's default (`defaultStatus` in `lib/season.ts`). Marking ✕
-requires a reason. Every save writes an entry to the Update Log with the previous values, and
-an admin can revert it with `ADMIN_PASSWORD`.
-
-Anyone with the link can edit anyone's attendance — that keeps it frictionless for a small
-company, and the log plus revert is the safety net. If you need more control, put the site
-behind your host's password protection or add authentication before the first real season.
-
-## Seasons and the archive
-
-Everything on /admin belongs to the current season (`_meta.current_season`, default 1). To start
-season 2, set that value to `2` in the database and build the new season on /admin; season 1 stays
-readable at `/archive` behind `ARCHIVE_PIN`.
-
-## Scripts
+```bash
+npm install
+cp .env.example .env.local     # DATABASE_URL, ADMIN_PASSWORD (ARCHIVE_PIN optional)
+npm run seed                   # creates the tables and loads the sample company
+npm run dev                    # http://localhost:3000
+```
 
 | Command | Does |
 | --- | --- |
@@ -91,9 +82,19 @@ readable at `/archive` behind `ARCHIVE_PIN`.
 | `npm run build` / `npm start` | Production build and server |
 | `npm run lint` | ESLint |
 | `npm run seed` | Create tables and load the sample company (`-- --reset` to start over) |
+| `npm test` | Browser smoke tests in Chrome, Firefox and Safari's engine (needs a seeded database and `npx playwright install`) |
 
-## Notes
-
-- Built on Next.js 16 (App Router), React 19, Tailwind v4, TypeScript and `pg`.
+- **Stack:** Next.js 16 (App Router), React 19, Tailwind v4, TypeScript, `pg` (no ORM). Any Postgres works.
+- **Data:** only answers are stored (`absences`); a missing row means the default. Every save and undo runs in one
+  transaction and writes an `update_log` entry holding the previous values.
+- **Seasons:** everything belongs to `_meta.current_season` (default 1). Set it to 2 to start a new season; the old
+  one stays readable at `/archive` behind `ARCHIVE_PIN`.
+- **Branding:** presets, tones, fonts and the contrast rules live in `lib/brand.ts`. Wording is in `lib/i18n.ts`;
+  the placeholder logo in `lib/logoPaths.ts`.
+- **Public demo:** `DEMO_MODE=1` shows the admin password on the sign-in screen, adds a banner and a "Reset demo"
+  button, keeps uploaded logos on the visitor's device, and (with `CRON_SECRET`) lets the daily job in `vercel.json`
+  restore the sample. Without `DEMO_MODE` that job does nothing.
+- **CI:** lint, build and the browser tests run on every push (`.github/workflows/ci.yml`).
 - `AGENTS.md` / `CLAUDE.md` are hints for AI coding assistants; keep or delete them.
-- MIT licensed (see `LICENSE`).
+
+MIT licensed (see `LICENSE`).

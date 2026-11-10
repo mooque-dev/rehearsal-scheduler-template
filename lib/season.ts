@@ -37,6 +37,13 @@ export interface Team {
   sort_order: number;
 }
 
+/** A link in the Resources panel (shared folder, social page, …), edited on /admin. */
+export interface ResourceLink {
+  id: number;
+  label: string;
+  url: string;
+}
+
 export interface SiteSettings {
   title: { en: string; ko: string };
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminPassword, ADMIN_COOKIE, ADMIN_COOKIE_MAX_AGE } from "@/lib/adminAuth";
+import { callerKey, isBlocked, recordFailure } from "@/lib/throttle";
 
 export async function POST(req: NextRequest) {
   let body: { password?: string };
@@ -11,12 +12,18 @@ export async function POST(req: NextRequest) {
   if (!process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: "admin_disabled" }, { status: 503 });
   }
+  const key = callerKey(req, "admin");
+  if (await isBlocked(key)) return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
   const token = checkAdminPassword(body.password);
-  if (!token) return NextResponse.json({ error: "wrong_password" }, { status: 401 });
+  if (!token) {
+    await recordFailure(key);
+    return NextResponse.json({ error: "wrong_password" }, { status: 401 });
+  }
   const res = NextResponse.json({ ok: true });
   res.cookies.set(ADMIN_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // Secure whenever the page is served over https (Safari rejects Secure cookies on http://localhost)
+    secure: (req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "")) === "https",
     sameSite: "lax",
     maxAge: ADMIN_COOKIE_MAX_AGE,
     path: "/",

@@ -47,6 +47,7 @@ export default function AttendanceSummary({
   const l = (k: Parameters<typeof t>[1]) => t(lang, k);
   const ko = lang === "ko";
   const [sort, setSort] = useState<Sort>("name");
+  const [view, setView] = useState<"people" | "dates">("people");
   const focusRef = useRef<HTMLLIElement>(null);
 
   const rows = useMemo(() => {
@@ -72,6 +73,33 @@ export default function AttendanceSummary({
     return list;
   }, [people, dates, statusMap, pendingChanges, defaultStatus, sort, ko, usesRoles]);
 
+  // The organiser's view: for each upcoming date, who is coming, who isn't and
+  // who hasn't answered yet (the people to nudge).
+  const byDate = useMemo(() => {
+    const roleTeams = new Set(usesRoles ? people.map((p) => p.department) : []);
+    const today = localISODate();
+    return dates
+      .filter((d) => d.date >= today)
+      .map((d) => {
+        let yes = 0;
+        const no: string[] = [];
+        const waiting: string[] = [];
+        for (const p of people) {
+          if (!attends(p, d, roleTeams)) continue;
+          const k = `${p.id}:${d.date}`;
+          const status = pendingChanges.has(k) ? pendingChanges.get(k) : (statusMap.get(k) ?? defaultStatus);
+          if (status === "no") no.push(p.name);
+          else if (status === "unset") waiting.push(p.name);
+          else yes++;
+        }
+        return { d, yes, no, waiting };
+      });
+  }, [people, dates, statusMap, pendingChanges, defaultStatus, usesRoles]);
+
+  useEffect(() => {
+    if (open && focusId !== null) setView("people");
+  }, [open, focusId]);
+
   useEffect(() => {
     if (open && focusId !== null) setTimeout(() => focusRef.current?.scrollIntoView({ block: "center" }), 50);
   }, [open, focusId]);
@@ -93,6 +121,49 @@ export default function AttendanceSummary({
       <div className="mb-3">
         <Segmented
           label={l("attendanceSummary")}
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "people", label: ko ? "사람별" : "By person" },
+            { value: "dates", label: ko ? "날짜별" : "By date" },
+          ]}
+        />
+      </div>
+      {view === "dates" ? (
+        <ul className="divide-y divide-zinc-800">
+          {byDate.length === 0 && <li className="py-8 text-center text-sm text-zinc-400">{ko ? "남은 일정이 없어요." : "No upcoming dates."}</li>}
+          {byDate.map(({ d, yes, no, waiting }) => (
+            <li key={d.date} className="py-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm font-medium text-zinc-100">
+                  {new Date(d.date + "T12:00:00").toLocaleDateString(ko ? "ko-KR" : "en-US", { month: "short", day: "numeric", weekday: "short" })}
+                  {d.title && <span className="ml-2 text-xs font-normal text-zinc-400">{d.title}</span>}
+                </span>
+                <span className="shrink-0 text-xs text-zinc-300 tabular">
+                  {ko ? `참석 ${yes} · 불참 ${no.length}` : `${yes} coming · ${no.length} out`}
+                  {defaultStatus === "unset" && <span className="text-zinc-400">{ko ? ` · 미응답 ${waiting.length}` : ` · ${waiting.length} to answer`}</span>}
+                </span>
+              </div>
+              {no.length > 0 && (
+                <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                  {ko ? "불참: " : "Out: "}
+                  {no.join(", ")}
+                </p>
+              )}
+              {defaultStatus === "unset" && waiting.length > 0 && (
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                  {ko ? "미응답: " : "Not answered: "}
+                  {waiting.join(", ")}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+      <>
+      <div className="mb-3">
+        <Segmented
+          label={ko ? "정렬" : "Sort"}
           value={sort}
           onChange={setSort}
           options={[
@@ -128,6 +199,8 @@ export default function AttendanceSummary({
           </li>
         ))}
       </ul>
+      </>
+      )}
     </Sheet>
   );
 }
