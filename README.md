@@ -34,14 +34,14 @@ The demo holds a made-up company and resets every day, so nothing you do there c
 
 ## Get your own (about 10 minutes, no coding)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template&project-name=rehearsal-scheduler&repository-name=rehearsal-scheduler&env=ADMIN_PASSWORD&envDescription=The%20password%20for%20your%20%2Fadmin%20page.%20Choose%20a%20long%20one%20and%20keep%20it%20private.&envLink=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template%2Fblob%2Fmain%2Fdocs%2FGETTING-STARTED.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%5D)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template&project-name=rehearsal-scheduler&repository-name=rehearsal-scheduler&env=ADMIN_PASSWORD&envDescription=%EA%B4%80%EB%A6%AC%20%ED%8E%98%EC%9D%B4%EC%A7%80%20%EB%B9%84%EB%B0%80%EB%B2%88%ED%98%B8%20%C2%B7%20Password%20for%20your%20%2Fadmin%20page.%20Choose%20a%20long%20one%20and%20keep%20it%20private.&envLink=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template%23get-your-own-about-10-minutes-no-coding&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%5D)
 
 1. Press the button. Vercel copies this project to your own GitHub account, creates a free database for it and asks
    for one thing: an **admin password**.
 2. When it finishes, open `your-site.vercel.app/admin`, sign in and choose **Load the sample** or **Start empty**.
 3. Add your teams, people and dates, set your look under **Branding**, and share the link with your group.
 
-New to GitHub or Vercel? **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** walks through every step, including
+New to GitHub or Vercel? The demo's **[Get your own](https://rehearsal-scheduler-demo.vercel.app/start)** page and **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** (한국어: **[docs/GETTING-STARTED.ko.md](docs/GETTING-STARTED.ko.md)**) walk through every step, including
 what to do if the button doesn't set up the database for you.
 
 ## Good to know before you share it
@@ -71,7 +71,7 @@ Moving a date keeps the answers already given. Deleting a date or a member remov
 
 ```bash
 npm install
-cp .env.example .env.local     # DATABASE_URL, ADMIN_PASSWORD (ARCHIVE_PIN optional)
+cp .env.example .env.local     # DATABASE_URL (or POSTGRES_URL), ADMIN_PASSWORD (ARCHIVE_PIN optional)
 npm run seed                   # creates the tables and loads the sample company
 npm run dev                    # http://localhost:3000
 ```

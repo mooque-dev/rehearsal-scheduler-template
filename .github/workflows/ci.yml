@@ -43,3 +43,31 @@ jobs:
       - run: npm run build
       - run: npm run seed -- --reset
       - run: npm test
+
+  # A one-click deploy starts with an empty database and never runs the seed script.
+  first-run:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scheduler
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # the name some hosting integrations use, to prove the app accepts it
+      POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/scheduler
+      ADMIN_PASSWORD: test-admin
+      FIRST_RUN: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npx playwright test --project=chromium

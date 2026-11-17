@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "@/lib/prefs";
-import { SITE } from "@/lib/site.config";
 import { useBrand } from "@/components/BrandProvider";
 import { t, STATUS_CYCLE, STATUS_CYCLE_UNSET, teamLabel, type DepartmentKey } from "@/lib/i18n";
 import type { Person, Notice, UpdateLogEntry } from "@/lib/types";
@@ -329,9 +328,9 @@ export default function ScheduleApp() {
             <Link href="/admin" className="font-semibold underline underline-offset-2 min-h-8 inline-flex items-center">
               {ko ? "관리 페이지 보기" : "Try the admin"}
             </Link>
-            <a href={SITE.templateUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2 min-h-8 inline-flex items-center">
+            <Link href="/start" className="font-semibold underline underline-offset-2 min-h-8 inline-flex items-center">
               {ko ? "내 팀용으로 만들기" : "Get your own"}
-            </a>
+            </Link>
           </div>
         )}
         <header className="mb-4 sm:mb-5">

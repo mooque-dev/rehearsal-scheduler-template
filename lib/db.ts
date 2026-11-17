@@ -9,10 +9,17 @@ export class DbNotConfiguredError extends Error {
 
 let pool: Pool | null = null;
 
+// DATABASE_URL is what .env.example and the guides use; POSTGRES_URL is the name some
+// hosting integrations (Vercel Postgres, older Neon setups) put in the environment.
+function connectionString(): string | undefined {
+  return process.env.DATABASE_URL || process.env.POSTGRES_URL;
+}
+
 function getPool(): Pool {
-  if (!process.env.DATABASE_URL) throw new DbNotConfiguredError();
+  const url = connectionString();
+  if (!url) throw new DbNotConfiguredError();
   if (!pool) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    pool = new Pool({ connectionString: url });
   }
   return pool;
 }

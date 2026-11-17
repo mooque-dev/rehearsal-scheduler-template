@@ -5,8 +5,13 @@ import { defineConfig, devices } from "@playwright/test";
 //   DATABASE_URL=… ADMIN_PASSWORD=test-admin npm run build && npm run seed -- --reset && npm test
 const PORT = 3210;
 
+// FIRST_RUN=1 runs only tests/first-run.spec.ts, against an EMPTY database (what a
+// one-click deploy starts with); otherwise that file is skipped and the rest need a seeded one.
+const firstRun = !!process.env.FIRST_RUN;
+
 export default defineConfig({
   testDir: "tests",
+  ...(firstRun ? { testMatch: "first-run.spec.ts" } : { testIgnore: "first-run.spec.ts" }),
   workers: 1, // the tests share one database
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",

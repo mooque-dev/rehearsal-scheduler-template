@@ -13,7 +13,8 @@ export default function OnboardingModal({ teams }: { teams: Team[] }) {
   const [department, setDepartment] = useState(prefs.department);
   const choice = teams.some((tm) => tm.key === department) ? department : (teams[0]?.key ?? department);
 
-  if (!ready || prefs.onboarded) return null;
+  // a brand-new site has no teams to pick: the owner goes straight to "Open admin" instead
+  if (!ready || prefs.onboarded || teams.length === 0) return null;
   const r = STRINGS[lang];
 
   // preview the theme on the page behind the sheet as soon as it's picked

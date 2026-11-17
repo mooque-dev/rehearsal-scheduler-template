@@ -13,6 +13,7 @@ for (const file of [".env.local", ".env"]) {
   const m = readFileSync(file, "utf8").match(/^DATABASE_URL=["']?([^"'\n]+)["']?/m);
   if (m) process.env.DATABASE_URL = m[1];
 }
+if (!process.env.DATABASE_URL && process.env.POSTGRES_URL) process.env.DATABASE_URL = process.env.POSTGRES_URL;
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL is not set. Copy .env.example to .env.local and fill it in.");
   process.exit(1);

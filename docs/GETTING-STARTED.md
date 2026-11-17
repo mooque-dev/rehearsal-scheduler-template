@@ -1,5 +1,7 @@
 # Getting started — no coding needed
 
+[한국어 안내서](GETTING-STARTED.ko.md)
+
 This sets up your own copy of the scheduler: your link, your people, your look. It takes about ten minutes and
 everything happens in a web browser. It's free.
 
@@ -12,7 +14,7 @@ Want to look first? The demo is at https://rehearsal-scheduler-demo.vercel.app (
 
 ## 1. Create your copy
 
-1. Open **[this link](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template&project-name=rehearsal-scheduler&repository-name=rehearsal-scheduler&env=ADMIN_PASSWORD&envDescription=The%20password%20for%20your%20%2Fadmin%20page.%20Choose%20a%20long%20one%20and%20keep%20it%20private.&envLink=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template%2Fblob%2Fmain%2Fdocs%2FGETTING-STARTED.md&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%5D)** (it's the "Deploy with Vercel" button from the front page).
+1. Open **[this link](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template&project-name=rehearsal-scheduler&repository-name=rehearsal-scheduler&env=ADMIN_PASSWORD&envDescription=%EA%B4%80%EB%A6%AC%20%ED%8E%98%EC%9D%B4%EC%A7%80%20%EB%B9%84%EB%B0%80%EB%B2%88%ED%98%B8%20%C2%B7%20Password%20for%20your%20%2Fadmin%20page.%20Choose%20a%20long%20one%20and%20keep%20it%20private.&envLink=https%3A%2F%2Fgithub.com%2Fmooque-dev%2Frehearsal-scheduler-template%23get-your-own-about-10-minutes-no-coding&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%5D)** (it's the "Deploy with Vercel" button from the front page).
 2. Sign in to Vercel with GitHub if it asks.
 3. **Create Git Repository:** leave the name as it is (or type your group's name, no spaces), keep **Private** ticked,
    press **Create**.
