@@ -12,7 +12,7 @@ test("a brand-new site leads its owner from the schedule to a loaded sample", as
   await openAdmin.click();
 
   await page.getByLabel(/Password|비밀번호/).fill(ADMIN_PASSWORD);
-  await page.getByRole("button", { name: /Sign in|로그인/ }).click();
+  await page.getByRole("button", { name: /Sign in|들어가기/ }).click();
 
   // the welcome card offers both starts
   await expect(page.getByRole("button", { name: /Start empty|빈 상태로 시작/ })).toBeVisible();
