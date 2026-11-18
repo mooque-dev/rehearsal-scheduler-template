@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/seed.mjs",
+    "set-admin-password": "node scripts/set-admin-password.mjs",
     "test": "playwright test"
   },
   "dependencies": {

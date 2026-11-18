@@ -5,6 +5,8 @@ import type { Brand } from "@/lib/brand";
 export interface AdminState {
   season: number;
   demo: boolean;
+  /** still on the password the site was deployed with */
+  setupPassword: boolean;
   site: SiteSettings;
   defaultStatus: "yes" | "unset";
   brand: Brand;

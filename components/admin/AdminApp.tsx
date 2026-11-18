@@ -356,7 +356,7 @@ export default function AdminApp() {
     </section>
   );
 
-  const general = <GeneralSection state={state} tx={tx} busy={busy} onSave={(p) => act("settings.save", p, savedOk)} onReset={() => act("demo.reset", {}, tx("데모를 처음 상태로 되돌렸어요", "Demo reset"))} />;
+  const general = <GeneralSection state={state} tx={tx} busy={busy} onSave={(p) => act("settings.save", p, savedOk)} onReset={() => act("demo.reset", {}, tx("데모를 처음 상태로 되돌렸어요", "Demo reset"))} onPasswordChanged={() => { show(tx("비밀번호를 바꿨어요", "Password changed")); load(); }} />;
 
   // ── editors ───────────────────────────────────────────────────────────────
 
@@ -401,6 +401,18 @@ export default function AdminApp() {
               "This is a demo. Changes are visible to everyone with the link. You can reset it any time under General."
             )}
           </p>
+        )}
+
+        {state.setupPassword && tab !== "general" && (
+          <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/25 px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="flex-1 min-w-[14rem] text-sm text-amber-200 leading-relaxed break-keep">
+              {tx(
+                "처음 받은 임시 비밀번호를 쓰고 있어요. 나만 아는 비밀번호로 바꿔 주세요.",
+                "You're still using the temporary password you were given. Change it to one only you know."
+              )}
+            </p>
+            <Button onClick={() => setTab("general")}>{tx("비밀번호 바꾸기", "Change password")}</Button>
+          </div>
         )}
 
         {state.teams.length === 0 && state.people.length === 0 && state.sessions.length === 0 && (
@@ -1013,12 +1025,14 @@ function GeneralSection({
   busy,
   onSave,
   onReset,
+  onPasswordChanged,
 }: {
   state: AdminState;
   tx: Tx;
   busy: boolean;
   onSave: (p: Record<string, unknown>) => void;
   onReset: () => void;
+  onPasswordChanged: () => void;
 }) {
   const [en, setEn] = useState(state.site.title.en);
   const [koTitle, setKo] = useState(state.site.title.ko);
@@ -1043,6 +1057,8 @@ function GeneralSection({
         {tx("저장", "Save")}
       </Button>
 
+      {!state.demo && <PasswordSection tx={tx} setupPassword={state.setupPassword} onChanged={onPasswordChanged} />}
+
       {state.demo && (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
           <p className="text-sm text-zinc-300">
@@ -1052,5 +1068,99 @@ function GeneralSection({
         </div>
       )}
     </section>
+  );
+}
+
+function PasswordSection({ tx, setupPassword, onChanged }: { tx: Tx; setupPassword: boolean; onChanged: () => void }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [again, setAgain] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const tooShort = next.length > 0 && next.trim().length < 8;
+  const mismatch = again.length > 0 && again !== next;
+  const ready = current && next.trim().length >= 8 && again === next && !saving;
+
+  async function submit() {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current, next }),
+      });
+      if (res.ok) {
+        setCurrent("");
+        setNext("");
+        setAgain("");
+        onChanged();
+        return;
+      }
+      const code = (await res.json().catch(() => ({}))).error;
+      setError(
+        code === "wrong_password"
+          ? tx("지금 비밀번호가 맞지 않아요.", "The current password isn't right.")
+          : code === "too_many_attempts"
+            ? tx("시도가 너무 많았어요. 10분 뒤에 다시 해 주세요.", "Too many tries. Please wait 10 minutes.")
+            : code === "too_short"
+              ? tx("새 비밀번호는 8자 이상이어야 해요.", "The new password needs at least 8 characters.")
+              : tx("바꾸지 못했어요. 다시 시도해 주세요.", "Couldn't change it. Please try again.")
+      );
+    } catch {
+      setError(tx("바꾸지 못했어요. 다시 시도해 주세요.", "Couldn't change it. Please try again."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ready) submit();
+      }}
+    >
+      <div>
+        <p className="text-base font-semibold text-zinc-100">{tx("관리 비밀번호", "Admin password")}</p>
+        <p className="mt-1 text-sm text-zinc-400 leading-relaxed break-keep">
+          {setupPassword
+            ? tx(
+                "지금은 처음 받은 임시 비밀번호예요. 나만 아는 비밀번호로 바꾸면 임시 비밀번호는 더 이상 쓸 수 없어요.",
+                "This is still the temporary password you were given. Once you change it, the temporary one stops working."
+              )
+            : tx(
+                "바꾸면 다른 기기에서는 다시 로그인해야 해요. 잊어버리면 사이트를 관리하는 사람(Vercel 계정 주인)에게 초기화를 부탁하세요.",
+                "Other devices will need to sign in again. If you forget it, whoever runs the site (the Vercel account owner) can reset it."
+              )}
+        </p>
+      </div>
+      <TextField type="password" autoComplete="current-password" label={tx("지금 비밀번호", "Current password")} value={current} onChange={setCurrent} />
+      <TextField
+        type="password"
+        autoComplete="new-password"
+        label={tx("새 비밀번호", "New password")}
+        value={next}
+        onChange={setNext}
+        hint={tooShort ? tx("8자 이상으로 해 주세요.", "At least 8 characters.") : tx("8자 이상. 짧은 문장도 좋아요.", "At least 8 characters. A short sentence works well.")}
+      />
+      <TextField
+        type="password"
+        autoComplete="new-password"
+        label={tx("새 비밀번호 확인", "New password again")}
+        value={again}
+        onChange={setAgain}
+        hint={mismatch ? tx("위와 같게 입력해 주세요.", "Doesn't match the one above.") : undefined}
+      />
+      {error && (
+        <p role="alert" className="text-sm text-red-400">
+          {error}
+        </p>
+      )}
+      <Button type="submit" variant="primary" className="w-full sm:w-auto" disabled={!ready}>
+        {saving ? tx("바꾸는 중…", "Changing…") : tx("비밀번호 바꾸기", "Change password")}
+      </Button>
+    </form>
   );
 }

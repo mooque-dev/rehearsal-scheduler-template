@@ -13,15 +13,17 @@ export function TextField({
   hint,
   autoFocus,
   multiline,
+  autoComplete,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  type?: "text" | "date";
+  type?: "text" | "date" | "password";
   placeholder?: string;
   hint?: string;
   autoFocus?: boolean;
   multiline?: boolean;
+  autoComplete?: string;
 }) {
   const id = useId();
   return (
@@ -44,6 +46,7 @@ export function TextField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           autoFocus={autoFocus}
+          autoComplete={autoComplete}
           className={inputClass}
         />
       )}

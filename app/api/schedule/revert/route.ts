@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   const key = callerKey(req, "revert");
   if (await isBlocked(key)) return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
-  const auth = checkRevertPassword(password);
+  const auth = await checkRevertPassword(password);
   if (auth === "disabled") return NextResponse.json({ error: "revert_disabled" }, { status: 503 });
   if (auth === "wrong") {
     await recordFailure(key);
