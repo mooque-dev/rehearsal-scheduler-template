@@ -60,6 +60,8 @@ jobs:
       # the name some hosting integrations use, to prove the app accepts it
       POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/scheduler
       ADMIN_PASSWORD: test-admin
+      # as on a site set up by scripts/host-team.sh: the organiser is asked to change it
+      ADMIN_PASSWORD_IS_TEMPORARY: "1"
       FIRST_RUN: "1"
     steps:
       - uses: actions/checkout@v5

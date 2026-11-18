@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, ensureSchema, getCurrentSeason, withTransaction, DbNotConfiguredError, type Q } from "@/lib/db";
-import { verifyAdminToken, isDemo, ADMIN_COOKIE } from "@/lib/adminAuth";
+import { verifyAdminToken, isDemo, usingSetupPassword, ADMIN_COOKIE } from "@/lib/adminAuth";
 import { getSiteSettings, getDefaultStatus, getBrand, getLinks, setMeta } from "@/lib/data";
 import { normalizeBrand } from "@/lib/brand";
 import { weeklyDates, inBreak } from "@/lib/season";
@@ -91,6 +91,7 @@ async function loadState(season: number): Promise<AdminState> {
   return {
     season,
     demo: isDemo(),
+    setupPassword: !isDemo() && (await usingSetupPassword()),
     site,
     defaultStatus,
     brand,
@@ -104,8 +105,8 @@ async function loadState(season: number): Promise<AdminState> {
   };
 }
 
-function authed(req: NextRequest) {
-  return verifyAdminToken(req.cookies.get(ADMIN_COOKIE)?.value);
+async function authed(req: NextRequest) {
+  return await verifyAdminToken(req.cookies.get(ADMIN_COOKIE)?.value);
 }
 
 function failure(e: unknown) {
@@ -117,7 +118,7 @@ function failure(e: unknown) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!authed(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authed(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     await ensureSchema();
     return NextResponse.json(await loadState(await getCurrentSeason()));
@@ -142,7 +143,7 @@ async function move(q: Q, table: "teams" | "people", rowId: number, dir: number,
 }
 
 export async function POST(req: NextRequest) {
-  if (!authed(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authed(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   let b: Record<string, unknown>;
   try {
     b = await req.json();

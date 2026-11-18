@@ -44,6 +44,8 @@ The demo holds a made-up company and resets every day, so nothing you do there c
 New to GitHub or Vercel? The demo's **[Get your own](https://rehearsal-scheduler-demo.vercel.app/start)** page and **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** (한국어: **[docs/GETTING-STARTED.ko.md](docs/GETTING-STARTED.ko.md)**) walk through every step, including
 what to do if the button doesn't set up the database for you.
 
+Hosting the site *for* a group instead, so they never touch any of this? See **[docs/HOSTING.md](docs/HOSTING.md)**: one command per team, and the organiser changes the temporary admin password on `/admin`.
+
 ## Good to know before you share it
 
 - **Anyone with the link can mark anyone's attendance.** That keeps it effortless for a small group; the update log

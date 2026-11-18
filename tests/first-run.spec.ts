@@ -39,3 +39,46 @@ test("the start page links to the one-click deploy", async ({ page }) => {
   const deploy = page.getByRole("link", { name: /Deploy|Vercel로 만들기/ });
   await expect(deploy).toHaveAttribute("href", /vercel\.com\/new\/clone\?repository-url=.*products=/);
 });
+
+// Runs last: it changes the password. CI sets ADMIN_PASSWORD_IS_TEMPORARY=1, as scripts/host-team.sh does.
+test("the organiser replaces the temporary password, and the host can reset it", async ({ page, context }) => {
+  const signIn = async (pw: string) => {
+    await page.goto("/admin");
+    await page.getByLabel(/^(Password|비밀번호)$/).fill(pw);
+    await page.getByRole("button", { name: /Sign in|들어가기/ }).click();
+  };
+  const tabs = page.getByRole("tablist");
+
+  await signIn(ADMIN_PASSWORD);
+  await expect(tabs).toBeVisible();
+  // the reminder banner takes the organiser to the form
+  await page.getByRole("button", { name: /^(Change password|비밀번호 바꾸기)$/ }).click();
+  const ours = "our own long secret";
+  await page.getByLabel(/^(Current password|지금 비밀번호)$/).fill(ADMIN_PASSWORD);
+  await page.getByLabel(/^(New password|새 비밀번호)$/).fill(ours);
+  await page.getByLabel(/^(New password again|새 비밀번호 확인)$/).fill(ours);
+  await page.getByRole("button", { name: /^(Change password|비밀번호 바꾸기)$/ }).click();
+  await expect(page.getByText(/Password changed|비밀번호를 바꿨어요/)).toBeVisible();
+  // still signed in on this device, and no more reminder
+  await page.reload();
+  await expect(tabs).toBeVisible();
+  await expect(page.getByText(/temporary password you were given|처음 받은 임시 비밀번호를 쓰고/)).toBeHidden();
+
+  // the temporary password no longer works; the new one does
+  await context.clearCookies();
+  await signIn(ADMIN_PASSWORD);
+  await expect(page.getByRole("alert").filter({ hasText: /./ })).toBeVisible();
+  await expect(tabs).toBeHidden();
+  await signIn(ours);
+  await expect(tabs).toBeVisible();
+
+  // the host resets a forgotten password from the terminal; it applies with no redeploy
+  const { execFileSync } = await import("node:child_process");
+  execFileSync("node", ["scripts/set-admin-password.mjs", "reset by the host"], { env: process.env, stdio: "pipe" });
+  await context.clearCookies();
+  await signIn(ours);
+  await expect(page.getByRole("alert").filter({ hasText: /./ })).toBeVisible();
+  await signIn("reset by the host");
+  await expect(tabs).toBeVisible();
+  await expect(page.getByText(/temporary password you were given|처음 받은 임시 비밀번호를 쓰고/)).toBeVisible();
+});
